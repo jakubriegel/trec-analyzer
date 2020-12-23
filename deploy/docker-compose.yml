@@ -1,0 +1,16 @@
+version: "3.7"
+services:
+  trec-service:
+    build:
+      context: ../trec-service
+    ports:
+      - "8001:8001"
+    depends_on:
+      - elasticsearch
+  elasticsearch:
+    image: elasticsearch:7.10.1
+    environment:
+      discovery.type: single-node
+    ports:
+      - "9200:9200"
+    container_name: elasticsearch
