@@ -13,10 +13,10 @@ private data class Rel (
 )
 
 data class EvaluationData (
-        val queryId: String,
-        val documentId: String,
+        val queryId: Int,
+        val documentId: Int,
         val rank: Int,
-        val score: Double
+        val score: Float
 )
 
 class TrecEvalException (msg: String) : Exception(msg)
@@ -29,7 +29,6 @@ private val qrels = File(QRELS_FILE_PATH)
     .map { it.split(" ") }
     .map { (queryId, _, documentId, isRelevant) ->
         Rel(queryId, documentId, isRelevant != "0")
-
     }
 
 fun validate(queryId: String, documentId: String): Boolean? =

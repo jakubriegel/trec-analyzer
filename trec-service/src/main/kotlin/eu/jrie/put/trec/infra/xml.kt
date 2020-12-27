@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
-import eu.jrie.put.trec.domain.model.Article
-import eu.jrie.put.trec.domain.model.Articles
-import eu.jrie.put.trec.domain.model.MeshHeading
+import eu.jrie.put.trec.domain.model.*
+import eu.jrie.put.trec.domain.query.Queries
+import eu.jrie.put.trec.domain.query.Query
 
 class ArticlesDeserializer : StdDeserializer<Articles>(Articles::class.java) {
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Articles {
@@ -43,9 +43,29 @@ class ArticlesDeserializer : StdDeserializer<Articles>(Articles::class.java) {
     }
 }
 
+class QueriesDeserializer : StdDeserializer<Queries>(Queries::class.java) {
+    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Queries {
+        return p.codec.readTree<JsonNode>(p)
+            .get("topic")
+            .elements()
+            .asSequence()
+            .map { it.queryValue() }
+            .let { Queries(it) }
+    }
+
+    private fun JsonNode.queryValue(): Query {
+        val id = get("number").textValue().toInt()
+        val disease = get("disease").textValue()
+        val gene = get("gene").textValue()
+        val treatment = get("treatment").textValue()
+        return Query(id, disease, gene, treatment)
+    }
+}
+
 val xmlMapper = XmlMapper().apply {
     val module = SimpleModule().apply {
         addDeserializer(Articles::class.java, ArticlesDeserializer())
+        addDeserializer(Queries::class.java, QueriesDeserializer())
     }
     registerModule(module)
 }

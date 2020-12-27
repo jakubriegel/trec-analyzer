@@ -27,6 +27,7 @@ COPY --from=setup-stage /trec_eval /trec_eval
 COPY --from=build-stage /app/build/libs/trec-service.jar /trec-service.jar
 
 COPY qrels /qrels
+COPY topics /topics
 
 EXPOSE 8001
 

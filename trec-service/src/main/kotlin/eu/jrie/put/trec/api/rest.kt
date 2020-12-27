@@ -1,9 +1,11 @@
 package eu.jrie.put.trec.api
 
+import eu.jrie.put.trec.domain.eval.EvaluationData
 import eu.jrie.put.trec.domain.eval.TrecEvalException
 import eu.jrie.put.trec.domain.eval.evaluate
 import eu.jrie.put.trec.domain.eval.validate
 import eu.jrie.put.trec.domain.index.es.ElasticsearchRepository
+import eu.jrie.put.trec.domain.query.QueryRepository
 import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.http.*
@@ -14,9 +16,10 @@ import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.*
-import org.apache.http.HttpStatus
+import kotlinx.coroutines.flow.*
 
 
+@FlowPreview
 @ExperimentalCoroutinesApi
 @ObsoleteCoroutinesApi
 fun startServer() {
@@ -28,15 +31,28 @@ fun startServer() {
         val esContext = newCoroutineContext(newFixedThreadPoolContext(1, "esContext"))
         val elasticsearchRepository = ElasticsearchRepository(esContext)
 
+        val queryRepository = QueryRepository()
+
         routing {
             post("/find") {
                 environment.log.info("find")
-                val request: QueryRequest = call.receive()
+                val request: CustomQueryRequest = call.receive()
                 val results = elasticsearchRepository.find(request.query, request.options.algorithm)
 
-                environment.log.info("find ok")
                 call.respond(
-                    QueryResponse(request, results)
+                    CustomQueryResponse(request, results)
+                )
+            }
+
+            post("/find/query") {
+                environment.log.info("find query")
+                val request: QueryRequest = call.receive()
+
+                val query = queryRepository.get(request.queryId)
+                val results = elasticsearchRepository.find(query.disease, request.options.algorithm)
+
+                call.respond(
+                    QueryResponse(query, request.options, results)
                 )
             }
 
@@ -50,16 +66,27 @@ fun startServer() {
 
             post("/evaluate") {
                 val request: EvaluationRequest = call.receive()
-                try {
-                    val results = evaluate(request.name, request.data)
-                    call.respond(results)
-                } catch (e: TrecEvalException) {
-                    call.respond(HttpStatusCode.InternalServerError, e.message as Any)
-                }
-            }
 
-            post("/evaluate/search") {
-
+                request.queriesIds
+                    .asFlow()
+                    .map { queryRepository.get(it) }
+                    .map { it.id to elasticsearchRepository.find(it.disease, request.options.algorithm) }
+                    .flatMapMerge { (queryId, matches) ->
+                        matches.asFlow()
+                            .withIndex()
+                            .map { (rank, match) ->
+                                EvaluationData(queryId, match.article.id, rank, match.score)
+                            }
+                    }
+                    .toList()
+                    .let {
+                        try {
+                            val results = evaluate(request.name, it)
+                            call.respond(results)
+                        } catch (e: TrecEvalException) {
+                            call.respond(HttpStatusCode.InternalServerError, e.message as Any)
+                        }
+                    }
             }
         }
     }.start(wait = true)
