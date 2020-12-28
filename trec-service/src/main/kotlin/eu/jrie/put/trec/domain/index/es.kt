@@ -38,52 +38,59 @@ private val client = RestHighLevelClient(
 
 fun initEs() {
     logger.info("Initializing ES index")
-    createEsIndex()
+    createEsIndexes()
     readArticles()
         .chunked(10000)
-        .forEach { insertArticles(it) }
+        .forEach {
+            insertArticles(it, "trec_bm25")
+            insertArticles(it, "trec_dfr")
+        }
     client.close()
 }
 
-private fun createEsIndex() {
+private fun createEsIndexes() {
     val ping = client.ping(RequestOptions.DEFAULT)
     logger.info("Test es ping ok=$ping")
 
+    createIndex("trec_bm25", """
+        {
+            "type": "BM25",
+            "b": 0.75, 
+            "k1": 1.2
+        }
+    """)
+    createIndex("trec_dfr", """
+        {
+            "type": "DFR",
+            "basic_model": "g", 
+            "after_effect": "b",
+            "normalization": "h2"
+        }
+    """)
+}
+
+private fun createIndex(name: String, type: String) {
     runCatching {
-        logger.info("Deleting es index")
-        val requestDel = DeleteIndexRequest("trec_bm25")
+        logger.info("Deleting $name index")
+        val requestDel = DeleteIndexRequest(name)
         val delIndexResponse = client.indices().delete(requestDel, RequestOptions.DEFAULT)
-        logger.info("Deleting index ok=${delIndexResponse.isAcknowledged}")
+        logger.info("Deleting $name index ok=${delIndexResponse.isAcknowledged}")
     }
 
-    logger.info("Creating es index")
-    val request = CreateIndexRequest("trec_bm25")
+    logger.info("Creating $name index")
+    val request = CreateIndexRequest(name)
     request.settings(
         """{
             "number_of_shards": 1,
             "similarity": {
-                 "trec_bm25": {
-                    "type": "BM25",
-                    "b": 0, 
-                    "k1": 0.9
-                 }
+                 "default": $type
             }
         }""",
         XContentType.JSON
     )
 
-    request.mapping(
-        """{
-                  "properties": {
-                    "message": {
-                      "type": "text"
-                    }
-                  }
-                }""",
-        XContentType.JSON)
-
     val createIndexResponse = client.indices().create(request, RequestOptions.DEFAULT)
-    logger.info("Creating index ok=${createIndexResponse.isAcknowledged}")
+    logger.info("Creating $name index ok=${createIndexResponse.isAcknowledged}")
 }
 
 private fun insertArticle(article: Article) {
@@ -95,16 +102,16 @@ private fun insertArticle(article: Article) {
     logger.info(indexResponse.toString())
 }
 
-private fun insertArticles(articles: List<Article>) {
+private fun insertArticles(articles: List<Article>, index: String) {
     val inserts = articles.map {
-        IndexRequest("trec_bm25")
+        IndexRequest(index)
             .id(it.id.toString())
             .source(jsonMapper.writeValueAsString(it), XContentType.JSON)
             .opType(DocWriteRequest.OpType.CREATE)
     }
     val request = BulkRequest().add(inserts)
     client.bulk(request, RequestOptions.DEFAULT)
-    logger.info("bulk insert done")
+    logger.info("bulk insert into $index done")
 }
 
 class ElasticsearchRepository (
@@ -124,6 +131,7 @@ class ElasticsearchRepository (
     private suspend fun submit(query: String, index: String) = withContext(context) {
         SearchSourceBuilder()
             .query(QueryBuilders.multiMatchQuery(query, "title", "content"))
+            .size(20)
             .let { SubmitAsyncSearchRequest(it, index) }
             .let {
                 @Suppress("BlockingMethodInNonBlockingContext")

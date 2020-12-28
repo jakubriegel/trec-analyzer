@@ -11,21 +11,14 @@ Invoke-WebRequest -Method PUT "$EsAddress/trec" -ContentType 'application/json' 
     "settings" = @{
         "number_of_shards" = 1
         "similarity" = @{
-            "trec_bm25" = @{
+            "default" = @{
                     "type" = "BM25"
                     "b" = 0 
                     "k1" = 0.9
             }
         }
       }
-      "mappings" = @{
-        "properties" = @{
-          "field" = @{
-            "type" = "text"
-            "similarity" = "trec_bm25"
-          }
-        }
-      }
+      
 } | ConvertTo-Json -Depth 25) 
 
 # add documents

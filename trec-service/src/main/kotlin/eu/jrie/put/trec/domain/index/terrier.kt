@@ -86,6 +86,7 @@ class TerrierRepository (
         val request = queryingManager.newSearchRequestFromQuery(query)
             .apply {
                 setControl(CONTROL_WMODEL, model)
+                setControl("end", "20")
                 setControl("terrierql", "on")
                 setControl("parsecontrols", "on")
                 setControl("parseql", "on")
