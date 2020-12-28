@@ -3,7 +3,6 @@ package eu.jrie.put.trec.domain.eval
 import java.io.File
 import java.lang.ProcessBuilder.Redirect.PIPE
 import java.util.*
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.SECONDS
 
 private data class Rel (
@@ -21,8 +20,14 @@ data class EvaluationData (
 
 class TrecEvalException (msg: String) : Exception(msg)
 
+data class EvalResult (
+    val name: String,
+    val value: String
+)
+
 private const val QRELS_FILE_PATH = "/qrels/qrels2020"
 private val WORKDIR = File("/")
+private val RESULT_DELIMITER_REGEX = Regex("[ \t]+")
 
 private val qrels = File(QRELS_FILE_PATH)
     .readLines()
@@ -34,7 +39,7 @@ private val qrels = File(QRELS_FILE_PATH)
 fun validate(queryId: String, documentId: String): Boolean? =
     qrels.find { it.queryId == queryId && it.documentId == documentId }?.relevant
 
-fun evaluate(name: String, data: List<EvaluationData>): String {
+fun evaluate(name: String, data: List<EvaluationData>): Pair<List<EvalResult>, String> {
     val dataFile = File("/data_${UUID.randomUUID()}")
     data.asSequence()
         .map { "${it.queryId} Q0 ${it.documentId} ${it.rank} ${it.score} $name\n" }
@@ -50,10 +55,23 @@ fun evaluate(name: String, data: List<EvaluationData>): String {
 
     dataFile.delete()
 
-    val err = evaluation.errorStream.bufferedReader().readText()
-    if (err.isNotBlank()) {
-        throw TrecEvalException("Error during eval: $err")
-    } else {
-        return evaluation.inputStream.bufferedReader().readText()
-    }
+    evaluation.errorStream
+        .bufferedReader()
+        .readText()
+        .let {
+            if (it.isNotBlank()) throw TrecEvalException("Error during eval: $it")
+        }
+
+    val log = evaluation.inputStream
+        .bufferedReader()
+        .readText()
+    val results = log.lineSequence()
+        .drop(1)
+        .map { it.replace(RESULT_DELIMITER_REGEX, " ") }
+        .map { it.split(" ") }
+        .filter { it.size >= 3 }
+        .map { (name, _, value) -> EvalResult(name, value) }
+        .toList()
+
+    return results to log
 }

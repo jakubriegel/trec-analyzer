@@ -85,10 +85,18 @@ fun startServer() {
                             }
                     }
                     .toList()
-                    .let {
+                    .let { data ->
                         try {
-                            val results = evaluate(request.name, it)
-                            call.respond(results)
+                            val (results, log) = evaluate(request.name, data)
+                            val latex = """
+                                \begin{tabular}{ |c|c| } 
+                                 \hline
+                                 ${results.joinToString { "${it.name} & ${it.value} \\\\\n" }}
+                                 \hline
+                                \end{tabular}
+                            """.trimIndent()
+
+                            call.respond(EvaluationResponse(results, log, latex))
                         } catch (e: TrecEvalException) {
                             call.respond(InternalServerError, e.message as Any)
                         }

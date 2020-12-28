@@ -22,7 +22,3 @@ class QueryRepository {
 
         fun get(id: Int): Query = queries.find { it.id == id }!!
 }
-
-fun main() {
-        println(QueryRepository().get(1))
-}

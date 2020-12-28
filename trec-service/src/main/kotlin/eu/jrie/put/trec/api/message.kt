@@ -1,6 +1,6 @@
 package eu.jrie.put.trec.api
 
-import eu.jrie.put.trec.domain.eval.EvaluationData
+import eu.jrie.put.trec.domain.eval.EvalResult
 import eu.jrie.put.trec.domain.index.ArticleMatch
 import eu.jrie.put.trec.domain.query.Query
 
@@ -29,6 +29,12 @@ data class EvaluationRequest (
     val name: String,
     val queriesIds: List<Int>,
     val options: QueryOptions
+)
+
+data class EvaluationResponse (
+    val results: List<EvalResult>,
+    val log: String,
+    val latex: String
 )
 
 data class QueryOptions (
