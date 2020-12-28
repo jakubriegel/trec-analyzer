@@ -18,7 +18,7 @@ data class MeshHeading(
     val name: String
 )
 
-private const val DEFAULT_ARTICLES_PATH = "C:\\Users\\jakub\\dev\\zti_trec\\pubmed19n0001.xml"
+private const val DEFAULT_ARTICLES_PATH = "/corpus/pubmed19n0001.xml"
 
 fun readArticles(articlesPath: String = DEFAULT_ARTICLES_PATH): Sequence<Article> {
     return File(articlesPath).readText()

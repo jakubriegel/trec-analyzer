@@ -1,7 +1,9 @@
 package eu.jrie.put.trec.domain.index.es
 
 import com.fasterxml.jackson.databind.json.JsonMapper
-import eu.jrie.put.trec.domain.model.Article
+import eu.jrie.put.trec.domain.Article
+import eu.jrie.put.trec.domain.readArticles
+import eu.jrie.put.trec.infra.jsonMapper
 import org.apache.http.HttpHost
 import org.elasticsearch.action.DocWriteRequest
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest
@@ -16,20 +18,27 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 
-private const val ES_HOST = "localhost"
+private const val ES_HOST = "elasticsearch"
 private const val ES_PORT = 9200
+val ELASTICSEARCH_HOST = HttpHost(ES_HOST, ES_PORT, "http")
 
 private val client = RestHighLevelClient(
-    RestClient.builder(
-        HttpHost(ES_HOST, ES_PORT, "http")
-    )
+    RestClient.builder(ELASTICSEARCH_HOST)
 )
 
-fun stopElastic() {
+fun initEs() {
+    logger.info("Initializing ES index")
+    createEsIndex()
+    readArticles()
+        .chunked(10000)
+        .forEach {
+            insertArticles(it)
+            logger.info("inserted")
+        }
     client.close()
 }
 
-fun createEsIndex() {
+private fun createEsIndex() {
     val ping = client.ping(RequestOptions.DEFAULT)
     logger.info("Test es ping ok=$ping")
 
@@ -70,9 +79,7 @@ fun createEsIndex() {
     logger.info("Creating index ok=${createIndexResponse.isAcknowledged}")
 }
 
-val jsonMapper = JsonMapper()
-
-fun insertArticle(article: Article) {
+private fun insertArticle(article: Article) {
     val request = IndexRequest("trec_bm25")
         .id(article.id.toString())
         .source(jsonMapper.writeValueAsString(article), XContentType.JSON)
@@ -81,7 +88,7 @@ fun insertArticle(article: Article) {
     logger.info(indexResponse.toString())
 }
 
-fun insertArticles(articles: List<Article>) {
+private fun insertArticles(articles: List<Article>) {
     val inserts = articles.map {
         IndexRequest("trec_bm25")
             .id(it.id.toString())

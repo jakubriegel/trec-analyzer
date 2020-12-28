@@ -3,12 +3,17 @@ package eu.jrie.put.trec.domain.index.es
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import eu.jrie.put.trec.domain.Article
 import eu.jrie.put.trec.domain.index.ArticleMatch
 import eu.jrie.put.trec.domain.index.Repository
-import eu.jrie.put.trec.domain.model.Article
+import eu.jrie.put.trec.infra.jsonMapper
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.withIndex
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.apache.http.HttpHost
+import org.elasticsearch.action.get.GetRequest
 import org.elasticsearch.client.RequestOptions
 import org.elasticsearch.client.RestClient
 import org.elasticsearch.client.RestHighLevelClient
@@ -22,11 +27,9 @@ class ElasticsearchRepository (
     private val context: CoroutineContext
 ) : Repository() {
 
-    private val jsonMapper = JsonMapper().registerKotlinModule()
-
     private val client = runBlocking(context) {
         RestHighLevelClient(
-            RestClient.builder(host)
+            RestClient.builder(ELASTICSEARCH_HOST)
         )
     }
 
@@ -34,30 +37,30 @@ class ElasticsearchRepository (
 
     override suspend fun findByBM25(query: String) = submit(query, "trec_bm25")
 
-    private suspend fun submit(query: String, index: String): List<ArticleMatch> {
-        return withContext(context) {
-            SearchSourceBuilder()
-                .query(QueryBuilders.multiMatchQuery(query, "title", "content"))
-                .let { SubmitAsyncSearchRequest(it, index) }
-                .let {
-                    @Suppress("BlockingMethodInNonBlockingContext")
-                    client.asyncSearch()
-                        .submit(it, RequestOptions.DEFAULT)
-                }
-                .searchResponse.hits.hits
-                .asSequence()
-                .map { hit ->
-                    val article: Article = jsonMapper.readValue(hit.sourceAsString)
-                    ArticleMatch(hit.score, article)
-                }
-                .sortedByDescending { it.score }
-                .toList()
-        }
+    private suspend fun submit(query: String, index: String) = withContext(context) {
+        SearchSourceBuilder()
+            .query(QueryBuilders.multiMatchQuery(query, "title", "content"))
+            .let { SubmitAsyncSearchRequest(it, index) }
+            .let {
+                @Suppress("BlockingMethodInNonBlockingContext")
+                client.asyncSearch()
+                    .submit(it, RequestOptions.DEFAULT)
+            }
+            .searchResponse.hits.hits
+            .sortedByDescending { it.score }
+            .asFlow()
+            .withIndex()
+            .map { (i, hit) ->
+                val article: Article = jsonMapper.readValue(hit.sourceAsString)
+                ArticleMatch(i+1, hit.score, article)
+            }
     }
 
-    companion object {
-        private const val ES_HOST = "elasticsearch"
-        private const val ES_PORT = 9200
-        private val host = HttpHost(ES_HOST, ES_PORT, "http")
+    suspend fun get(id: String): Article = withContext(context) {
+        val request = GetRequest("trec_bm25", id)
+        @Suppress("BlockingMethodInNonBlockingContext")
+        client.get(request, RequestOptions.DEFAULT)
+            .sourceAsString
+            .let { jsonMapper.readValue(it) as Article }
     }
 }

@@ -2,4 +2,8 @@
 .idea
 build
 out
-terrier
+
+terrier_data
+corpus
+topics
+qrels

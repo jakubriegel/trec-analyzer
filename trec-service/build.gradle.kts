@@ -47,5 +47,6 @@ tasks.shadowJar {
             )
         )
     }
+    isZip64 = true
     archiveFileName.set("trec-service.jar")
 }

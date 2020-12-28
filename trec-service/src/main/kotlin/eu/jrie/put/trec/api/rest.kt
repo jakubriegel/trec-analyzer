@@ -1,10 +1,13 @@
 package eu.jrie.put.trec.api
 
+import eu.jrie.put.trec.api.IndexEngine.ELASTICSEARCH
+import eu.jrie.put.trec.api.IndexEngine.TERRIER
 import eu.jrie.put.trec.domain.eval.EvaluationData
 import eu.jrie.put.trec.domain.eval.TrecEvalException
 import eu.jrie.put.trec.domain.eval.evaluate
 import eu.jrie.put.trec.domain.eval.validate
 import eu.jrie.put.trec.domain.index.es.ElasticsearchRepository
+import eu.jrie.put.trec.domain.index.terrier.TerrierRepository
 import eu.jrie.put.trec.domain.query.QueryRepository
 import io.ktor.application.*
 import io.ktor.features.*
@@ -28,8 +31,11 @@ fun startServer() {
             register(ContentType.Application.Json, JacksonConverter())
         }
 
-        val esContext = newCoroutineContext(newFixedThreadPoolContext(1, "esContext"))
+        val esContext = newCoroutineContext(newFixedThreadPoolContext(3, "esContext"))
         val elasticsearchRepository = ElasticsearchRepository(esContext)
+
+        val terrierContext = newCoroutineContext(newFixedThreadPoolContext(3, "terrierContext"))
+        val terrierRepository = TerrierRepository(terrierContext)
 
         val queryRepository = QueryRepository()
 
@@ -37,7 +43,12 @@ fun startServer() {
             post("/find") {
                 environment.log.info("find")
                 val request: CustomQueryRequest = call.receive()
-                val results = elasticsearchRepository.find(request.query, request.options.algorithm)
+
+                val results = when (request.options.engine) {
+                    ELASTICSEARCH -> elasticsearchRepository.find(request.query, request.options.algorithm)
+                    TERRIER -> terrierRepository.find(request.query, request.options.algorithm)
+                }
+
 
                 call.respond(
                     CustomQueryResponse(request, results)

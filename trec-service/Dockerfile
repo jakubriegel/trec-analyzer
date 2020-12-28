@@ -1,10 +1,17 @@
-FROM debian:bullseye-slim as setup-stage
+FROM ubuntu:20.04 as setup-stage
 
+# trec_eval setup
 RUN apt update
 RUN apt install -y git make gcc
 RUN git clone https://github.com/usnistgov/trec_eval.git
 WORKDIR trec_eval
 RUN make
+
+# data setup
+COPY corpus /corpus
+COPY qrels /qrels
+COPY topics /topics
+RUN mkdir /terrier_data
 
 FROM gradle:6.7.1-jdk11 as build-stage
 
@@ -24,10 +31,12 @@ RUN apt update
 RUN apt install -y openjdk-11-jdk
 
 COPY --from=setup-stage /trec_eval /trec_eval
-COPY --from=build-stage /app/build/libs/trec-service.jar /trec-service.jar
+COPY --from=setup-stage /corpus /corpus
+COPY --from=setup-stage /qrels /qrels
+COPY --from=setup-stage /topics /topics
+COPY --from=setup-stage /terrier_data /terrier_data
 
-COPY qrels /qrels
-COPY topics /topics
+COPY --from=build-stage /app/build/libs/trec-service.jar /trec-service.jar
 
 EXPOSE 8001
 

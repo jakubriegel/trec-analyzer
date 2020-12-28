@@ -42,7 +42,7 @@ data class IndexType (
 )
 
 enum class IndexEngine {
-    ELASTICSEARCH, PYTERRIER
+    ELASTICSEARCH, TERRIER
 }
 
 enum class IndexAlgorithm {
