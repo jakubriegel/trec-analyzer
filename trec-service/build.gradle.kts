@@ -10,7 +10,7 @@ repositories {
     mavenCentral()
 }
 
-val ktorVersion = "1.4.3"
+val ktorVersion = "1.5.0"
 
 dependencies {
     // kotlin
