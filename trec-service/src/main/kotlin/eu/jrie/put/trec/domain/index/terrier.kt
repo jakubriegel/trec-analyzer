@@ -1,9 +1,6 @@
-package eu.jrie.put.trec.domain.index.terrier
+package eu.jrie.put.trec.domain.index
 
 import eu.jrie.put.trec.domain.Article
-import eu.jrie.put.trec.domain.index.ArticleMatch
-import eu.jrie.put.trec.domain.index.Repository
-import eu.jrie.put.trec.domain.index.es.ElasticsearchRepository
 import eu.jrie.put.trec.domain.readArticles
 import eu.jrie.put.trec.infra.jsonMapper
 import kotlinx.coroutines.flow.asFlow

@@ -6,8 +6,8 @@ import eu.jrie.put.trec.domain.eval.EvaluationData
 import eu.jrie.put.trec.domain.eval.TrecEvalException
 import eu.jrie.put.trec.domain.eval.evaluate
 import eu.jrie.put.trec.domain.eval.validate
-import eu.jrie.put.trec.domain.index.es.ElasticsearchRepository
-import eu.jrie.put.trec.domain.index.terrier.TerrierRepository
+import eu.jrie.put.trec.domain.index.ElasticsearchRepository
+import eu.jrie.put.trec.domain.index.TerrierRepository
 import eu.jrie.put.trec.domain.query.QueryRepository
 import io.ktor.application.*
 import io.ktor.features.*
@@ -19,10 +19,10 @@ import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.flow.*
-import org.slf4j.event.Level
-import org.slf4j.event.Level.INFO
+import kotlinx.coroutines.newFixedThreadPoolContext
 
 
 @FlowPreview

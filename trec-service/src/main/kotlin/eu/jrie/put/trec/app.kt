@@ -1,9 +1,8 @@
 package eu.jrie.put.trec
 
 import eu.jrie.put.trec.api.startServer
-import eu.jrie.put.trec.domain.index.es.initEs
-import eu.jrie.put.trec.domain.index.terrier.initTerrier
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import eu.jrie.put.trec.domain.index.initEs
+import eu.jrie.put.trec.domain.index.initTerrier
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 
