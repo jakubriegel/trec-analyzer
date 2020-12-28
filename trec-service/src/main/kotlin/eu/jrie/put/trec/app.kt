@@ -8,7 +8,6 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 
 @ObsoleteCoroutinesApi
-@ExperimentalCoroutinesApi
 @FlowPreview
 fun main() {
     app(initIndexes = true, startServer = true)
@@ -16,7 +15,6 @@ fun main() {
 
 
 @ObsoleteCoroutinesApi
-@ExperimentalCoroutinesApi
 @FlowPreview
 fun app(initIndexes: Boolean, startServer: Boolean) {
     if (initIndexes) initIndexes()

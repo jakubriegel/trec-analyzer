@@ -12,6 +12,7 @@ import eu.jrie.put.trec.domain.query.QueryRepository
 import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.http.*
+import io.ktor.http.HttpStatusCode.Companion.InternalServerError
 import io.ktor.jackson.*
 import io.ktor.request.*
 import io.ktor.response.*
@@ -20,50 +21,45 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import org.slf4j.event.Level
+import org.slf4j.event.Level.INFO
 
 
 @FlowPreview
-@ExperimentalCoroutinesApi
 @ObsoleteCoroutinesApi
 fun startServer() {
     embeddedServer(Netty, port = 8001) {
+        install(CallLogging)
         install(ContentNegotiation) {
             register(ContentType.Application.Json, JacksonConverter())
         }
 
-        val esContext = newCoroutineContext(newFixedThreadPoolContext(3, "esContext"))
-        val elasticsearchRepository = ElasticsearchRepository(esContext)
+        val esContext = newFixedThreadPoolContext(3, "esContext")
+        val terrierContext = newFixedThreadPoolContext(3, "terrierContext")
 
-        val terrierContext = newCoroutineContext(newFixedThreadPoolContext(3, "terrierContext"))
-        val terrierRepository = TerrierRepository(terrierContext)
+        val repositories = mapOf(
+            ELASTICSEARCH to ElasticsearchRepository(esContext),
+            TERRIER to TerrierRepository(terrierContext)
+        )
 
         val queryRepository = QueryRepository()
 
         routing {
             post("/find") {
-                environment.log.info("find")
                 val request: CustomQueryRequest = call.receive()
-
-                val results = when (request.options.engine) {
-                    ELASTICSEARCH -> elasticsearchRepository.find(request.query, request.options.algorithm)
-                    TERRIER -> terrierRepository.find(request.query, request.options.algorithm)
-                }
-
-
+                val results = repositories.getValue(request.options.engine).find(request.query, request.options.algorithm)
                 call.respond(
                     CustomQueryResponse(request, results)
                 )
             }
 
             post("/find/query") {
-                environment.log.info("find query")
                 val request: QueryRequest = call.receive()
-
-                val query = queryRepository.get(request.queryId)
-                val results = elasticsearchRepository.find(query.disease, request.options.algorithm)
-
+                val topic = queryRepository.get(request.queryId)
+                    .also { environment.log.info("Query ${request.queryId} resolved as $it.") }
+                val results = repositories.getValue(request.options.engine).find(topic.disease, request.options.algorithm)
                 call.respond(
-                    QueryResponse(query, request.options, results)
+                    QueryResponse(topic, request.options, results)
                 )
             }
 
@@ -77,11 +73,10 @@ fun startServer() {
 
             post("/evaluate") {
                 val request: EvaluationRequest = call.receive()
-
                 request.queriesIds
                     .asFlow()
                     .map { queryRepository.get(it) }
-                    .map { it.id to elasticsearchRepository.find(it.disease, request.options.algorithm) }
+                    .map { it.id to repositories.getValue(request.options.engine).find(it.disease, request.options.algorithm) }
                     .flatMapMerge { (queryId, matches) ->
                         matches.asFlow()
                             .withIndex()
@@ -95,7 +90,7 @@ fun startServer() {
                             val results = evaluate(request.name, it)
                             call.respond(results)
                         } catch (e: TrecEvalException) {
-                            call.respond(HttpStatusCode.InternalServerError, e.message as Any)
+                            call.respond(InternalServerError, e.message as Any)
                         }
                     }
             }

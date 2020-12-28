@@ -31,10 +31,7 @@ fun initEs() {
     createEsIndex()
     readArticles()
         .chunked(10000)
-        .forEach {
-            insertArticles(it)
-            logger.info("inserted")
-        }
+        .forEach { insertArticles(it) }
     client.close()
 }
 
