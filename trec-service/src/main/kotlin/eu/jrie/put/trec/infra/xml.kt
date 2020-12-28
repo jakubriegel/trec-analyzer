@@ -6,9 +6,14 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
-import eu.jrie.put.trec.domain.model.*
+import eu.jrie.put.trec.domain.Article
+import eu.jrie.put.trec.domain.MeshHeading
 import eu.jrie.put.trec.domain.query.Queries
 import eu.jrie.put.trec.domain.query.Query
+
+data class Articles(
+    val data: Sequence<Article>
+)
 
 class ArticlesDeserializer : StdDeserializer<Articles>(Articles::class.java) {
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Articles {

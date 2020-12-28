@@ -28,6 +28,12 @@ dependencies {
     // elastic
     implementation("org.elasticsearch.client:elasticsearch-rest-high-level-client:7.10.1")
 
+    // terrier
+    implementation("org.terrier:terrier-core:5.3")
+    implementation("org.terrier:terrier-batch-indexers:5.3") {
+        exclude("com.github.cmacdonald")
+    }
+
     // logger
     implementation("org.apache.logging.log4j:log4j-core:2.14.0")
     implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.14.0")
