@@ -6,6 +6,7 @@ import eu.jrie.put.trec.domain.index.Repository
 import eu.jrie.put.trec.domain.index.es.ElasticsearchRepository
 import eu.jrie.put.trec.domain.readArticles
 import eu.jrie.put.trec.infra.jsonMapper
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.withIndex
@@ -75,21 +76,20 @@ class TerrierRepository (
                 + "matchopql:MatchingOpQLParser,"
                 + "applypipeline:ApplyTermPipeline,"
                 + "localmatching:LocalManager\$ApplyLocalMatching,"
-                + "filters:LocalManager\$PostFilterProcess");
+                + "filters:LocalManager\$PostFilterProcess")
 
         ApplicationSetup.setProperty("querying.postfilters", "decorate:org.terrier.querying.SimpleDecorate");
     }
 
-    override suspend fun findByDFR(query: String) = withContext(context) {
-        logger.info("Querying terrier for \"$query\" by DFR")
-        TODO("Not yet implemented")
-    }
+    override suspend fun findByDFR(query: String) = search(query, "BB2")
 
-    override suspend fun findByBM25(query: String) = withContext(context) {
-        logger.info("Querying terrier for \"$query\" by BM25")
+    override suspend fun findByBM25(query: String) = search(query, "BM25")
+
+    private suspend fun search(query: String, model: String) = withContext(context) {
+        logger.info("Querying terrier for \"$query\" by $model")
         val request = queryingManager.newSearchRequestFromQuery(query)
             .apply {
-                setControl(CONTROL_WMODEL, "BM25")
+                setControl(CONTROL_WMODEL, model)
                 setControl("terrierql", "on")
                 setControl("parsecontrols", "on")
                 setControl("parseql", "on")
