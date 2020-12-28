@@ -6,7 +6,6 @@ import eu.jrie.put.trec.domain.index.Repository
 import eu.jrie.put.trec.domain.index.es.ElasticsearchRepository
 import eu.jrie.put.trec.domain.readArticles
 import eu.jrie.put.trec.infra.jsonMapper
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.withIndex
@@ -53,8 +52,8 @@ private const val INDEX_PREFIX = "trec"
 fun initTerrier() {
     logger.info("Initializing terrier index")
 
-    ApplicationSetup.setProperty("indexer.meta.forward.keys", "id");
-    ApplicationSetup.setProperty("indexer.meta.forward.keylens", "20");
+    ApplicationSetup.setProperty("indexer.meta.forward.keys", "id")
+    ApplicationSetup.setProperty("indexer.meta.forward.keylens", "20")
 
     val indexer = BasicIndexer(INDEX_PATH, INDEX_PREFIX)
     val coll = FlatArticleCollection()
@@ -78,7 +77,7 @@ class TerrierRepository (
                 + "localmatching:LocalManager\$ApplyLocalMatching,"
                 + "filters:LocalManager\$PostFilterProcess")
 
-        ApplicationSetup.setProperty("querying.postfilters", "decorate:org.terrier.querying.SimpleDecorate");
+        ApplicationSetup.setProperty("querying.postfilters", "decorate:org.terrier.querying.SimpleDecorate")
     }
 
     override suspend fun findByDFR(query: String) = search(query, "BB2")
