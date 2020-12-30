@@ -8,6 +8,7 @@ import eu.jrie.put.trec.domain.eval.evaluate
 import eu.jrie.put.trec.domain.eval.validate
 import eu.jrie.put.trec.domain.index.ElasticsearchRepository
 import eu.jrie.put.trec.domain.index.TerrierRepository
+import eu.jrie.put.trec.domain.query.Query
 import eu.jrie.put.trec.domain.query.QueryRepository
 import io.ktor.application.*
 import io.ktor.features.*
@@ -43,6 +44,7 @@ fun startServer() {
         )
 
         val queryRepository = QueryRepository()
+        fun Query.asText() = "$disease $gene $treatment"
 
         routing {
             post("/find") {
@@ -57,7 +59,7 @@ fun startServer() {
                 val request: QueryRequest = call.receive()
                 val topic = queryRepository.get(request.queryId)
                     .also { environment.log.info("Query ${request.queryId} resolved as $it.") }
-                val results = repositories.getValue(request.options.engine).find(topic.disease, request.options.algorithm)
+                val results = repositories.getValue(request.options.engine).find(topic.asText(), request.options.algorithm)
                 call.respond(
                     QueryResponse(topic, request.options, results)
                 )
@@ -76,7 +78,7 @@ fun startServer() {
                 request.queriesIds
                     .asFlow()
                     .map { queryRepository.get(it) }
-                    .map { it.id to repositories.getValue(request.options.engine).find(it.disease, request.options.algorithm) }
+                    .map { it.id to repositories.getValue(request.options.engine).find(it.asText(), request.options.algorithm) }
                     .flatMapMerge { (queryId, matches) ->
                         matches.asFlow()
                             .withIndex()
