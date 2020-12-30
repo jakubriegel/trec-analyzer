@@ -4,6 +4,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import eu.jrie.put.trec.domain.Article
 import eu.jrie.put.trec.domain.readArticles
 import eu.jrie.put.trec.infra.jsonMapper
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.withIndex
@@ -36,7 +37,7 @@ private val client = RestHighLevelClient(
     RestClient.builder(ELASTICSEARCH_HOST)
 )
 
-fun initEs() {
+fun initEs() = runBlocking {
     logger.info("Initializing ES index")
     createEsIndexes()
     readArticles()
@@ -48,10 +49,18 @@ fun initEs() {
     client.close()
 }
 
-private fun createEsIndexes() {
-    val ping = client.ping(RequestOptions.DEFAULT)
-    logger.info("Test es ping ok=$ping")
+private tailrec suspend fun pingEs() {
+    val result = runCatching { client.ping(RequestOptions.DEFAULT) }
+    if (result.isSuccess) logger.info("Test es ping ok=${result.getOrNull()}")
+    else {
+        logger.info("Test es ping ok=NOT_AVAILABLE")
+        delay(1000)
+        pingEs()
+    }
+}
 
+private suspend fun createEsIndexes() {
+    pingEs()
     createIndex("trec_bm25", """
         {
             "type": "BM25",
