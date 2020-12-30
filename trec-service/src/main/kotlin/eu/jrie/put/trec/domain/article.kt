@@ -2,6 +2,7 @@ package eu.jrie.put.trec.domain
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import eu.jrie.put.trec.infra.Articles
+import eu.jrie.put.trec.infra.config
 import eu.jrie.put.trec.infra.xmlMapper
 import java.io.File
 
@@ -21,8 +22,10 @@ data class MeshHeading(
 private const val DEFAULT_ARTICLES_PATH = "/corpus"
 
 fun readArticles(articlesPath: String = DEFAULT_ARTICLES_PATH): Sequence<Article> {
+    val n = config.getInt("init.corpusFiles")
     return File(articlesPath).listFiles()!!
         .asSequence()
+        .let { if (n > 0) it.take(n) else it }
         .map { it.readText() }
         .map { xmlMapper.readValue<Articles>(it) }
         .flatMap { it.data }

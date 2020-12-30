@@ -1,9 +1,9 @@
 package eu.jrie.put.trec.domain.index
 
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.typesafe.config.ConfigFactory
 import eu.jrie.put.trec.domain.Article
 import eu.jrie.put.trec.domain.readArticles
+import eu.jrie.put.trec.infra.config
 import eu.jrie.put.trec.infra.jsonMapper
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.produce
@@ -26,11 +26,9 @@ import org.elasticsearch.index.query.QueryBuilders
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.File
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-
 
 private const val ES_HOST = "elasticsearch"
 private const val ES_PORT = 9200
@@ -40,16 +38,19 @@ private val client = RestHighLevelClient(
     RestClient.builder(ELASTICSEARCH_HOST)
 )
 
-private val config = ConfigFactory.parseFile(File("/application.conf"))
-
 @ExperimentalCoroutinesApi
 fun initEs() = runBlocking {
     logger.info("Initializing ES index")
     createEsIndexes()
+
+    val chunkSize = config.getInt("es.init.chunkSize")
     val articles = produce {
         readArticles()
-            .chunked(config.getInt("es.init.chunkSize"))
-            .forEach { send(it) }
+            .chunked(chunkSize)
+            .forEachIndexed{ i, chunk ->
+                if ((i % 100) == 0) logger.info("processed ${i * chunkSize} articles")
+                send(chunk)
+            }
     }
     val workers = List(config.getInt("es.init.workers")) {
         launch {
