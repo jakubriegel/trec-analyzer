@@ -1,13 +1,11 @@
 package eu.jrie.put.trec.api
 
 import eu.jrie.put.trec.api.IndexEngine.ELASTICSEARCH
-import eu.jrie.put.trec.api.IndexEngine.TERRIER
 import eu.jrie.put.trec.domain.eval.EvaluationData
 import eu.jrie.put.trec.domain.eval.TrecEvalException
 import eu.jrie.put.trec.domain.eval.evaluate
 import eu.jrie.put.trec.domain.eval.validate
 import eu.jrie.put.trec.domain.index.ElasticsearchRepository
-import eu.jrie.put.trec.domain.index.TerrierRepository
 import eu.jrie.put.trec.domain.query.Query
 import eu.jrie.put.trec.domain.query.QueryRepository
 import io.ktor.application.*
@@ -36,11 +34,11 @@ fun startServer() {
         }
 
         val esContext = newFixedThreadPoolContext(3, "esContext")
-        val terrierContext = newFixedThreadPoolContext(3, "terrierContext")
+//        val terrierContext = newFixedThreadPoolContext(3, "terrierContext")
 
         val repositories = mapOf(
             ELASTICSEARCH to ElasticsearchRepository(esContext),
-            TERRIER to TerrierRepository(terrierContext)
+//            TERRIER to TerrierRepository(terrierContext)
         )
 
         val queryRepository = QueryRepository()

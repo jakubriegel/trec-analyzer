@@ -48,7 +48,7 @@ fun initEs() = runBlocking {
         readArticles()
             .chunked(chunkSize)
             .forEachIndexed{ i, chunk ->
-                if ((i % 100) == 0) logger.info("processed ${i * chunkSize} articles")
+                if ((i % 20) == 0) logger.info("processed ${i * chunkSize} articles")
                 send(chunk)
             }
     }
