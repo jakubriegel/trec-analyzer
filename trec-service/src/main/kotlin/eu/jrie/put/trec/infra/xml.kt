@@ -29,20 +29,20 @@ class ArticlesDeserializer : StdDeserializer<Articles>(Articles::class.java) {
         val id = get("MedlineCitation").get("PMID").get("").textValue().toInt()
         val title = get("MedlineCitation").get("Article").get("ArticleTitle").textValue()
         val abstract = get("MedlineCitation").get("Article")?.get("Abstract")?.get("AbstractText")?.textValue() ?: ""
-        val keywords = get("MedlineCitation")?.get("KeywordList")?.get("Keyword")
+        val keywords = get("MedlineCitation").get("KeywordList")?.get("Keyword")
             ?.elements()
             ?.asSequence()
             ?.map { it.get("") }
             ?.filterNotNull()
             ?.map { it.textValue() }
             ?.toList() ?: emptyList()
-        val meshHeadings = get("MedlineCitation").get("MeshHeadingList").get("MeshHeading")
-            .elements()
-            .asSequence()
-            .map { it.get("DescriptorName") to it.get("QualifierName") }
-            .map { (description, name) -> description?.get("")?.textValue() to name?.get("")?.textValue() }
-            .map { (description, name) -> MeshHeading(description ?: "", name ?: "") }
-            .toList()
+        val meshHeadings = get("MedlineCitation")?.get("MeshHeadingList")?.get("MeshHeading")
+            ?.elements()
+            ?.asSequence()
+            ?.map { it.get("DescriptorName") to it.get("QualifierName") }
+            ?.map { (description, name) -> description?.get("")?.textValue() to name?.get("")?.textValue() }
+            ?.map { (description, name) -> MeshHeading(description ?: "", name ?: "") }
+            ?.toList() ?: emptyList()
 
         return Article(id, title, abstract, keywords, meshHeadings)
     }
