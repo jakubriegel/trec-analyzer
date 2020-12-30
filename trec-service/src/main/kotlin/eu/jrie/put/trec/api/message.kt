@@ -2,7 +2,7 @@ package eu.jrie.put.trec.api
 
 import eu.jrie.put.trec.domain.eval.EvalResult
 import eu.jrie.put.trec.domain.index.ArticleMatch
-import eu.jrie.put.trec.domain.query.Query
+import eu.jrie.put.trec.domain.query.Topic
 
 data class CustomQueryRequest (
     val query: String,
@@ -15,23 +15,34 @@ data class CustomQueryResponse (
 )
 
 data class QueryRequest (
-    val queryId: Int,
+    val topicId: Int,
     val options: QueryOptions
 )
 
 data class QueryResponse (
-    val query: Query,
+    val topic: Topic,
     val options: QueryOptions,
     val documents: List<ArticleMatch>
 )
 
-data class EvaluationRequest (
+data class EvaluateQrelsResponse (
+    val documentId: Int,
+    val topicId: Int,
+    val isRelevant: Boolean?
+)
+
+data class EvaluateTopicsRequest (
     val name: String,
-    val queriesIds: List<Int>,
+    val topicsIds: List<Int>,
     val options: QueryOptions
 )
 
-data class EvaluationResponse (
+data class EvaluateAllTopicsRequest (
+    val name: String,
+    val options: QueryOptions
+)
+
+data class EvaluateTopicsResponse (
     val results: List<EvalResult>,
     val log: String,
     val latex: String

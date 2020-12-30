@@ -6,13 +6,13 @@ import java.util.*
 import java.util.concurrent.TimeUnit.SECONDS
 
 private data class Rel (
-        val queryId: String,
+        val topicId: String,
         val documentId: String,
         val relevant: Boolean
 )
 
 data class EvaluationData (
-        val queryId: Int,
+        val topicId: Int,
         val documentId: Int,
         val rank: Int,
         val score: Float
@@ -32,46 +32,62 @@ private val RESULT_DELIMITER_REGEX = Regex("[ \t]+")
 private val qrels = File(QRELS_FILE_PATH)
     .readLines()
     .map { it.split(" ") }
-    .map { (queryId, _, documentId, isRelevant) ->
-        Rel(queryId, documentId, isRelevant != "0")
+    .map { (topicId, _, documentId, isRelevant) ->
+        Rel(topicId, documentId, isRelevant != "0")
     }
 
-fun validate(queryId: String, documentId: String): Boolean? =
-    qrels.find { it.queryId == queryId && it.documentId == documentId }?.relevant
+class EvaluationService {
 
-fun evaluate(name: String, data: List<EvaluationData>): Pair<List<EvalResult>, String> {
-    val dataFile = File("/data_${UUID.randomUUID()}")
-    data.asSequence()
-        .map { "${it.queryId} Q0 ${it.documentId} ${it.rank} ${it.score} $name\n" }
-        .forEach { dataFile.appendText(it) }
+    fun validate(topicId: Int, documentId: Int): Boolean? = validate(topicId.toString(), documentId.toString())
+    private fun validate(topicId: String, documentId: String): Boolean? =
+        qrels.find { it.topicId == topicId && it.documentId == documentId }?.relevant
 
-    val cmd = "/trec_eval/trec_eval -m all_trec $QRELS_FILE_PATH ${dataFile.absolutePath}".split(" ")
-    val evaluation = ProcessBuilder(cmd)
-        .directory(WORKDIR)
-        .redirectOutput(PIPE)
-        .redirectError(PIPE)
-        .start()
-        .apply { waitFor(30, SECONDS) }
+    fun evaluate(runName: String, data: List<EvaluationData>): Triple<List<EvalResult>, String, String> {
+        val (results, log) = runEvaluation(runName, data)
+        val latex = """
+            \begin{tabular}{ |c|c| } 
+             \hline
+             ${results.joinToString { "${it.name} & ${it.value} \\\\\n" }}
+             \hline
+            \end{tabular}
+        """.trimIndent()
+        return Triple(results, log, latex)
+    }
 
-    dataFile.delete()
+    private fun runEvaluation(name: String, data: List<EvaluationData>): Pair<List<EvalResult>, String> {
+        val dataFile = File("/data_${UUID.randomUUID()}")
+        data.asSequence()
+            .map { "${it.topicId} Q0 ${it.documentId} ${it.rank} ${it.score} $name\n" }
+            .forEach { dataFile.appendText(it) }
 
-    evaluation.errorStream
-        .bufferedReader()
-        .readText()
-        .let {
-            if (it.isNotBlank()) throw TrecEvalException("Error during eval: $it")
-        }
+        val cmd = "/trec_eval/trec_eval -m all_trec $QRELS_FILE_PATH ${dataFile.absolutePath}".split(" ")
+        val evaluation = ProcessBuilder(cmd)
+            .directory(WORKDIR)
+            .redirectOutput(PIPE)
+            .redirectError(PIPE)
+            .start()
+            .apply { waitFor(30, SECONDS) }
 
-    val log = evaluation.inputStream
-        .bufferedReader()
-        .readText()
-    val results = log.lineSequence()
-        .drop(1)
-        .map { it.replace(RESULT_DELIMITER_REGEX, " ") }
-        .map { it.split(" ") }
-        .filter { it.size >= 3 }
-        .map { (name, _, value) -> EvalResult(name, value) }
-        .toList()
+        dataFile.delete()
 
-    return results to log
+        evaluation.errorStream
+            .bufferedReader()
+            .readText()
+            .let {
+                if (it.isNotBlank()) throw TrecEvalException("Error during eval: $it")
+            }
+
+        val log = evaluation.inputStream
+            .bufferedReader()
+            .readText()
+        val results = log.lineSequence()
+            .drop(1)
+            .map { it.replace(RESULT_DELIMITER_REGEX, " ") }
+            .map { it.split(" ") }
+            .filter { it.size >= 3 }
+            .map { (name, _, value) -> EvalResult(name, value) }
+            .toList()
+
+        return results to log
+    }
 }
