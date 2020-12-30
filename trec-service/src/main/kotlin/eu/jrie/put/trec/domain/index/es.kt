@@ -5,9 +5,18 @@ import eu.jrie.put.trec.domain.Article
 import eu.jrie.put.trec.domain.readArticles
 import eu.jrie.put.trec.infra.config
 import eu.jrie.put.trec.infra.jsonMapper
-import kotlinx.coroutines.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.produce
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.withIndex
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import org.apache.http.HttpHost
 import org.elasticsearch.action.ActionListener
 import org.elasticsearch.action.DocWriteRequest
@@ -175,6 +184,7 @@ class ElasticsearchRepository (
     private suspend fun submit(query: String, index: String) = withContext(context) {
         SearchSourceBuilder()
             .query(QueryBuilders.multiMatchQuery(query, "title", "content"))
+            .size(1000)
             .let { SubmitAsyncSearchRequest(it, index) }
             .let {
                 @Suppress("BlockingMethodInNonBlockingContext")

@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 
 
@@ -47,7 +48,7 @@ fun startServer() {
                         query = request.query,
                         engine = request.options.engine,
                         algorithm = request.options.algorithm
-                    )
+                    ).take(10)
 
                     call.respond(
                         CustomQueryResponse(request, matches.toList())
@@ -70,7 +71,7 @@ fun startServer() {
             }
 
             route("/evaluate") {
-                post("/qrels") {
+                get("/qrels") {
                     val documentId = call.request.queryParameters["documentId"]!!.toInt()
                     val topicId = call.request.queryParameters["topicId"]!!.toInt()
 
@@ -108,7 +109,7 @@ fun startServer() {
                         handleEvaluateTopics(request.name, matches)
                     }
 
-                    post("/topics/all") {
+                    post("/all") {
                         val request: EvaluateAllTopicsRequest = call.receive()
 
                         val matches = indexService.findForAllQueries(
