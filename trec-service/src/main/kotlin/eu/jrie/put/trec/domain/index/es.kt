@@ -40,7 +40,7 @@ fun initEs() {
     logger.info("Initializing ES index")
     createEsIndexes()
     readArticles()
-        .chunked(10000)
+        .chunked(150_000)
         .forEach {
             insertArticles(it, "trec_bm25")
             insertArticles(it, "trec_dfr")
