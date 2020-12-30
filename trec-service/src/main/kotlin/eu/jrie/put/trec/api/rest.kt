@@ -63,7 +63,7 @@ fun startServer() {
                 )
             }
 
-            post("/validate") {
+            post("/evaluate/qrels") {
                 val documentId = call.request.queryParameters["documentId"]!!
                 val queryId = call.request.queryParameters["queryId"]!!
                 val isRelevant = call.request.queryParameters["isRelevant"]!!.let { it == "1" }
@@ -71,7 +71,7 @@ fun startServer() {
                 call.respond(validate(queryId, documentId) ?: "404")
             }
 
-            post("/evaluate") {
+            post("/evaluate/results") {
                 val request: EvaluationRequest = call.receive()
                 request.queriesIds
                     .asFlow()
