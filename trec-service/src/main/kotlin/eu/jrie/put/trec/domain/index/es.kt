@@ -44,10 +44,10 @@ fun initEs() = runBlocking {
     createEsIndexes()
     val articles = produce {
         readArticles()
-            .chunked(50_000)
+            .chunked(10_000)
             .forEach { send(it) }
     }
-    val workers = List(5) {
+    val workers = List(1) {
         launch {
             articles.consumeAsFlow()
                 .collect {
