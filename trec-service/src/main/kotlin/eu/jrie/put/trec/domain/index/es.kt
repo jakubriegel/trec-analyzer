@@ -41,7 +41,7 @@ fun initEs() = runBlocking {
     logger.info("Initializing ES index")
     createEsIndexes()
     readArticles()
-        .chunked(150_000)
+        .chunked(50_000)
         .forEach {
             insertArticles(it, "trec_bm25")
             insertArticles(it, "trec_dfr")
