@@ -23,6 +23,7 @@ private const val DEFAULT_ARTICLES_PATH = "/corpus"
 fun readArticles(articlesPath: String = DEFAULT_ARTICLES_PATH): Sequence<Article> {
     return File(articlesPath).listFiles()!!
         .asSequence()
+        .take(25)
         .map { it.readText() }
         .map { xmlMapper.readValue<Articles>(it) }
         .flatMap { it.data }
