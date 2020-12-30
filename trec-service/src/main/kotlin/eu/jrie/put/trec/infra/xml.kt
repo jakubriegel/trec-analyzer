@@ -27,7 +27,7 @@ class ArticlesDeserializer : StdDeserializer<Articles>(Articles::class.java) {
 
     private fun JsonNode.articleValue(): Article {
         val id = get("MedlineCitation").get("PMID").get("").textValue().toInt()
-        val title = get("MedlineCitation").get("Article").get("ArticleTitle").textValue()
+        val title = get("MedlineCitation").get("Article")?.get("ArticleTitle")?.textValue() ?: ""
         val abstract = get("MedlineCitation").get("Article")?.get("Abstract")?.get("AbstractText")?.textValue() ?: ""
         val keywords = get("MedlineCitation").get("KeywordList")?.get("Keyword")
             ?.elements()
