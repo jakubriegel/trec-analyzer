@@ -1,6 +1,7 @@
 package eu.jrie.put.trec.domain.index
 
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.typesafe.config.ConfigFactory
 import eu.jrie.put.trec.domain.Article
 import eu.jrie.put.trec.domain.readArticles
 import eu.jrie.put.trec.infra.jsonMapper
@@ -25,6 +26,7 @@ import org.elasticsearch.index.query.QueryBuilders
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.File
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -38,16 +40,18 @@ private val client = RestHighLevelClient(
     RestClient.builder(ELASTICSEARCH_HOST)
 )
 
+private val config = ConfigFactory.parseFile(File("/application.conf"))
+
 @ExperimentalCoroutinesApi
 fun initEs() = runBlocking {
     logger.info("Initializing ES index")
     createEsIndexes()
     val articles = produce {
         readArticles()
-            .chunked(10_000)
+            .chunked(config.getInt("es.init.chunkSize"))
             .forEach { send(it) }
     }
-    val workers = List(1) {
+    val workers = List(config.getInt("es.init.workers")) {
         launch {
             articles.consumeAsFlow()
                 .collect {
@@ -124,13 +128,15 @@ private fun insertArticle(article: Article) {
 
 @ExperimentalCoroutinesApi
 private suspend fun insertArticles(articles: List<Article>, index: String) {
-    val inserts = articles.map {
-        IndexRequest(index)
-            .id(it.id.toString())
-            .source(jsonMapper.writeValueAsString(it), XContentType.JSON)
-            .opType(DocWriteRequest.OpType.CREATE)
-    }
-    val request = BulkRequest().add(inserts)
+    val request = BulkRequest()
+    articles.asSequence()
+        .map {
+            IndexRequest(index)
+                .id(it.id.toString())
+                .source(jsonMapper.writeValueAsString(it), XContentType.JSON)
+                .opType(DocWriteRequest.OpType.CREATE)
+        }
+        .forEach { request.add(it) }
 
     suspendCancellableCoroutine<Unit> { continuation ->
         val callback = object : ActionListener<BulkResponse> {
@@ -144,6 +150,7 @@ private suspend fun insertArticles(articles: List<Article>, index: String) {
                 continuation.resumeWithException(e)
             }
         }
+        logger.info("bulk insert into $index start")
         client.bulkAsync(request, RequestOptions.DEFAULT, callback)
     }
 
