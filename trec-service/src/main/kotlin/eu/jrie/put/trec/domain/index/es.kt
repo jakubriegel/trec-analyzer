@@ -4,16 +4,15 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import eu.jrie.put.trec.domain.Article
 import eu.jrie.put.trec.domain.readArticles
 import eu.jrie.put.trec.infra.jsonMapper
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.withIndex
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.flow.*
 import org.apache.http.HttpHost
+import org.elasticsearch.action.ActionListener
 import org.elasticsearch.action.DocWriteRequest
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest
 import org.elasticsearch.action.bulk.BulkRequest
+import org.elasticsearch.action.bulk.BulkResponse
 import org.elasticsearch.action.get.GetRequest
 import org.elasticsearch.action.index.IndexRequest
 import org.elasticsearch.client.RequestOptions
@@ -27,6 +26,8 @@ import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 
 private const val ES_HOST = "elasticsearch"
@@ -37,15 +38,25 @@ private val client = RestHighLevelClient(
     RestClient.builder(ELASTICSEARCH_HOST)
 )
 
+@ExperimentalCoroutinesApi
 fun initEs() = runBlocking {
     logger.info("Initializing ES index")
     createEsIndexes()
-    readArticles()
-        .chunked(50_000)
-        .forEach {
-            insertArticles(it, "trec_bm25")
-            insertArticles(it, "trec_dfr")
+    val articles = produce {
+        readArticles()
+            .chunked(50_000)
+            .forEach { send(it) }
+    }
+    val workers = List(20) {
+        launch {
+            articles.consumeAsFlow()
+                .collect {
+                    insertArticles(it, "trec_bm25")
+                    insertArticles(it, "trec_dfr")
+                }
         }
+    }
+    workers.forEach { it.join() }
     client.close()
 }
 
@@ -54,7 +65,7 @@ private tailrec suspend fun pingEs() {
     if (result.isSuccess) logger.info("Test es ping ok=${result.getOrNull()}")
     else {
         logger.info("Test es ping ok=NOT_AVAILABLE")
-        delay(1000)
+        delay(3000)
         pingEs()
     }
 }
@@ -111,7 +122,8 @@ private fun insertArticle(article: Article) {
     logger.info(indexResponse.toString())
 }
 
-private fun insertArticles(articles: List<Article>, index: String) {
+@ExperimentalCoroutinesApi
+private suspend fun insertArticles(articles: List<Article>, index: String) {
     val inserts = articles.map {
         IndexRequest(index)
             .id(it.id.toString())
@@ -119,8 +131,23 @@ private fun insertArticles(articles: List<Article>, index: String) {
             .opType(DocWriteRequest.OpType.CREATE)
     }
     val request = BulkRequest().add(inserts)
-    client.bulk(request, RequestOptions.DEFAULT)
-    logger.info("bulk insert into $index done")
+
+    suspendCancellableCoroutine<Unit> { continuation ->
+        val callback = object : ActionListener<BulkResponse> {
+            override fun onResponse(response: BulkResponse?) {
+                logger.info("bulk insert into $index ok")
+                continuation.resume(Unit)
+            }
+
+            override fun onFailure(e: Exception) {
+                logger.error("bulk insert into $index failed", e)
+                continuation.resumeWithException(e)
+            }
+        }
+        client.bulkAsync(request, RequestOptions.DEFAULT, callback)
+    }
+
+
 }
 
 class ElasticsearchRepository (
