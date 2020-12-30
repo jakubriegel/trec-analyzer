@@ -2,7 +2,6 @@ package eu.jrie.put.trec
 
 import eu.jrie.put.trec.api.startServer
 import eu.jrie.put.trec.domain.index.initEs
-import eu.jrie.put.trec.domain.index.initTerrier
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 
@@ -21,6 +20,6 @@ fun app(initIndexes: Boolean, startServer: Boolean) {
 }
 
 fun initIndexes() {
-    initTerrier()
+//    initTerrier()
     initEs()
 }

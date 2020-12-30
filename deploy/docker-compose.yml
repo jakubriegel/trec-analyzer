@@ -13,4 +13,6 @@ services:
       discovery.type: single-node
     ports:
       - "9200:9200"
+    volumes:
+      - /storage/jrie/es:/usr/share/elasticsearch/data
     container_name: elasticsearch
