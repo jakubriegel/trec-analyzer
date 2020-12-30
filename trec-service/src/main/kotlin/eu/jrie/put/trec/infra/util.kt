@@ -6,9 +6,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import java.io.File
 
-object Resources {
-    fun get(name: String): String = javaClass.getResource(name).path
-}
+fun env(name: String): String = System.getenv(name)
 
 val jsonMapper = JsonMapper().registerKotlinModule()
 

@@ -41,10 +41,12 @@ private val client = RestHighLevelClient(
 @ExperimentalCoroutinesApi
 fun initEs() = runBlocking {
     logger.info("Initializing ES index")
+
+    pingEs()
     createEsIndexes()
 
-    val chunkSize = config.getInt("es.init.chunkSize")
     val articles = produce {
+        val chunkSize = config.getInt("es.init.chunkSize")
         readArticles()
             .chunked(chunkSize)
             .forEachIndexed{ i, chunk ->
@@ -52,7 +54,8 @@ fun initEs() = runBlocking {
                 send(chunk)
             }
     }
-    val workers = List(config.getInt("es.init.workers")) {
+
+    List(config.getInt("es.init.workers")) {
         launch {
             articles.consumeAsFlow()
                 .collect {
@@ -60,8 +63,8 @@ fun initEs() = runBlocking {
                     insertArticles(it, "trec_dfr")
                 }
         }
-    }
-    workers.forEach { it.join() }
+    }.forEach { it.join() }
+
     client.close()
 }
 
@@ -76,7 +79,6 @@ private tailrec suspend fun pingEs() {
 }
 
 private suspend fun createEsIndexes() {
-    pingEs()
     createIndex("trec_bm25", """
         {
             "type": "BM25",
@@ -104,15 +106,15 @@ private fun createIndex(name: String, type: String) {
 
     logger.info("Creating $name index")
     val request = CreateIndexRequest(name)
-    request.settings(
-        """{
-            "number_of_shards": 1,
-            "similarity": {
-                 "default": $type
-            }
-        }""",
-        XContentType.JSON
-    )
+        .settings(
+            """{
+                "number_of_shards": 1,
+                "similarity": {
+                     "default": $type
+                }
+            }""",
+            XContentType.JSON
+        )
 
     val createIndexResponse = client.indices().create(request, RequestOptions.DEFAULT)
     logger.info("Creating $name index ok=${createIndexResponse.isAcknowledged}")
@@ -141,8 +143,8 @@ private suspend fun insertArticles(articles: List<Article>, index: String) {
 
     suspendCancellableCoroutine<Unit> { continuation ->
         val callback = object : ActionListener<BulkResponse> {
-            override fun onResponse(response: BulkResponse?) {
-                logger.info("bulk insert into $index ok")
+            override fun onResponse(response: BulkResponse) {
+                logger.info("bulk insert into $index ok=${response.all { !it.isFailed }}")
                 continuation.resume(Unit)
             }
 
@@ -154,8 +156,6 @@ private suspend fun insertArticles(articles: List<Article>, index: String) {
         logger.info("bulk insert into $index start")
         client.bulkAsync(request, RequestOptions.DEFAULT, callback)
     }
-
-
 }
 
 class ElasticsearchRepository (
@@ -175,7 +175,6 @@ class ElasticsearchRepository (
     private suspend fun submit(query: String, index: String) = withContext(context) {
         SearchSourceBuilder()
             .query(QueryBuilders.multiMatchQuery(query, "title", "content"))
-            .size(20)
             .let { SubmitAsyncSearchRequest(it, index) }
             .let {
                 @Suppress("BlockingMethodInNonBlockingContext")

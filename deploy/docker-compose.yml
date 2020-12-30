@@ -3,6 +3,9 @@ services:
   trec-service:
     build:
       context: ../trec-service
+    environment: 
+      TREC_INIT_INDEX: 1
+      TREC_SERVER: 1
     ports:
       - "8001:8001"
     depends_on:
@@ -11,7 +14,7 @@ services:
     image: elasticsearch:7.10.1
     environment:
       discovery.type: single-node
-      threadpool.index.size: 50
+      thread_pool.write.queue_size: 2500
       ES_HEAP_SIZE: 30g
     ports:
       - "9200:9200"

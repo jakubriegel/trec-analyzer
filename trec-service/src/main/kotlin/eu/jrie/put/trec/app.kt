@@ -2,6 +2,7 @@ package eu.jrie.put.trec
 
 import eu.jrie.put.trec.api.startServer
 import eu.jrie.put.trec.domain.index.initEs
+import eu.jrie.put.trec.infra.env
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.ObsoleteCoroutinesApi
@@ -10,16 +11,16 @@ import kotlinx.coroutines.ObsoleteCoroutinesApi
 @ObsoleteCoroutinesApi
 @FlowPreview
 fun main() {
-    app(initIndexes = true, startServer = true)
+    app()
 }
 
 
 @ExperimentalCoroutinesApi
 @ObsoleteCoroutinesApi
 @FlowPreview
-fun app(initIndexes: Boolean, startServer: Boolean) {
-    if (initIndexes) initIndexes()
-    if (startServer) startServer()
+fun app() {
+    if (env("TREC_INIT_INDEX") == "1") initIndexes()
+    if (env("TREC_SERVER") == "1") startServer()
 }
 
 @ExperimentalCoroutinesApi
