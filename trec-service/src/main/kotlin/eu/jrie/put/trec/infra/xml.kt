@@ -8,8 +8,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import eu.jrie.put.trec.domain.Article
 import eu.jrie.put.trec.domain.MeshHeading
-import eu.jrie.put.trec.domain.query.Queries
-import eu.jrie.put.trec.domain.query.Query
+import eu.jrie.put.trec.domain.query.Topic
+import eu.jrie.put.trec.domain.query.Topics
 
 data class Articles(
     val data: Sequence<Article>
@@ -48,29 +48,29 @@ class ArticlesDeserializer : StdDeserializer<Articles>(Articles::class.java) {
     }
 }
 
-class QueriesDeserializer : StdDeserializer<Queries>(Queries::class.java) {
-    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Queries {
+class QueriesDeserializer : StdDeserializer<Topics>(Topics::class.java) {
+    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Topics {
         return p.codec.readTree<JsonNode>(p)
             .get("topic")
             .elements()
             .asSequence()
             .map { it.queryValue() }
-            .let { Queries(it) }
+            .let { Topics(it) }
     }
 
-    private fun JsonNode.queryValue(): Query {
+    private fun JsonNode.queryValue(): Topic {
         val id = get("number").textValue().toInt()
         val disease = get("disease").textValue()
         val gene = get("gene").textValue()
         val treatment = get("treatment").textValue()
-        return Query(id, disease, gene, treatment)
+        return Topic(id, disease, gene, treatment)
     }
 }
 
 val xmlMapper = XmlMapper().apply {
     val module = SimpleModule().apply {
         addDeserializer(Articles::class.java, ArticlesDeserializer())
-        addDeserializer(Queries::class.java, QueriesDeserializer())
+        addDeserializer(Topics::class.java, QueriesDeserializer())
     }
     registerModule(module)
 }

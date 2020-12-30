@@ -1,19 +1,27 @@
 package eu.jrie.put.trec.domain.index
 
 import eu.jrie.put.trec.api.IndexAlgorithm
-import eu.jrie.put.trec.api.IndexAlgorithm.*
-import kotlinx.coroutines.flow.*
+import eu.jrie.put.trec.api.IndexAlgorithm.BM25
+import eu.jrie.put.trec.api.IndexAlgorithm.BM25_PLUS_DFR
+import eu.jrie.put.trec.api.IndexAlgorithm.DFR
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.withIndex
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 abstract class Repository {
-    suspend fun find(query: String, algorithm: IndexAlgorithm): List<ArticleMatch> {
+    suspend fun find(query: String, algorithm: IndexAlgorithm): Flow<ArticleMatch> {
         logger.info("Finding \"$query\" by $algorithm.")
         return when (algorithm) {
             BM25 -> findByBM25(query)
             DFR -> findByDFR(query)
             BM25_PLUS_DFR -> findByBM25AndDFR(query)
-        } .take(25).toList()
+        }
     }
 
     protected abstract suspend fun findByDFR(query: String): Flow<ArticleMatch>
