@@ -11,6 +11,8 @@ services:
     image: elasticsearch:7.10.1
     environment:
       discovery.type: single-node
+      threadpool.index.size: 50
+      ES_HEAP_SIZE: 30g
     ports:
       - "9200:9200"
     volumes:

@@ -47,7 +47,7 @@ fun initEs() = runBlocking {
             .chunked(50_000)
             .forEach { send(it) }
     }
-    val workers = List(20) {
+    val workers = List(5) {
         launch {
             articles.consumeAsFlow()
                 .collect {
