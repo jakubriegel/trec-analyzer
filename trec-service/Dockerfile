@@ -8,7 +8,7 @@ WORKDIR trec_eval
 RUN make
 
 # data setup
-COPY corpus /corpus
+#COPY corpus /corpus
 COPY qrels /qrels
 COPY topics /topics
 RUN mkdir /terrier_data
@@ -22,8 +22,8 @@ COPY settings.gradle.kts /app/settings.gradle.kts
 COPY gradle /app/gradle
 COPY src /app/src
 
-COPY build /app/build
-#RUN gradle build shadowJar
+#COPY build /app/build
+RUN gradle build shadowJar
 
 FROM ubuntu:20.04 as production-stage
 
@@ -31,7 +31,7 @@ RUN apt update
 RUN apt install -y openjdk-11-jdk
 
 COPY --from=setup-stage /trec_eval /trec_eval
-COPY --from=setup-stage /corpus /corpus
+#COPY --from=setup-stage /corpus /corpus
 COPY --from=setup-stage /qrels /qrels
 COPY --from=setup-stage /topics /topics
 COPY --from=setup-stage /terrier_data /terrier_data
