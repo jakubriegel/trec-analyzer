@@ -21,12 +21,12 @@ data class MeshHeading(
 
 private const val DEFAULT_ARTICLES_PATH = "/corpus"
 
-fun readArticles(articlesPath: String = DEFAULT_ARTICLES_PATH): Sequence<Article> {
+fun readArticles(articlesPath: String = DEFAULT_ARTICLES_PATH): Pair<Int, Sequence<Sequence<Article>>> {
     val n = config.getInt("init.corpusFiles")
-    return File(articlesPath).listFiles()!!
-        .asSequence()
+    val files =  File(articlesPath).listFiles()!!
+    return files.size to files.asSequence()
         .let { if (n > 0) it.take(n) else it }
         .map { it.readText() }
         .map { xmlMapper.readValue<Articles>(it) }
-        .flatMap { it.data }
+        .map { it.data }
 }

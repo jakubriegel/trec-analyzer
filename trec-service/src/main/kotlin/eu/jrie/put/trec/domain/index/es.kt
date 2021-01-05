@@ -56,7 +56,9 @@ fun initEs() = runBlocking {
 
     val articles = produce {
         val chunkSize = config.getInt("es.init.chunkSize")
-        readArticles()
+        val (_, articlesSequence) = readArticles()
+        articlesSequence
+            .flatMap { it }
             .chunked(chunkSize)
             .forEachIndexed{ i, chunk ->
                 if ((i % 20) == 0) logger.info("processed ${i * chunkSize} articles")
