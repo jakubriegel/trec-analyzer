@@ -34,7 +34,9 @@ private data class FlatArticle(
     val process: String = "text"
 )
 
-private fun Article.flatten() = FlatArticle(id.toString(), "$title $abstract")
+private fun Article.flatten() = FlatArticle(
+    id.toString(), "$title $abstract ${keywords.joinToString(" ")} ${meshHeadings.map { "${it.name} ${it.description}" }.joinToString(" ")}"
+)
 
 class FlatArticleCollection(
     articles: Sequence<Article>
