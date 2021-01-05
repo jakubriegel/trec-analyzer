@@ -3,6 +3,7 @@ package eu.jrie.put.trec.domain.index
 import eu.jrie.put.trec.api.IndexAlgorithm
 import eu.jrie.put.trec.api.IndexEngine
 import eu.jrie.put.trec.api.IndexEngine.ELASTICSEARCH
+import eu.jrie.put.trec.api.IndexEngine.TERRIER
 import eu.jrie.put.trec.domain.Article
 import eu.jrie.put.trec.domain.query.Topic
 import eu.jrie.put.trec.domain.query.TopicRepository
@@ -22,11 +23,11 @@ data class ArticleMatch (
 @ObsoleteCoroutinesApi
 class IndexService {
     private val esContext = newFixedThreadPoolContext(3, "esContext")
-//    private val terrierContext = newFixedThreadPoolContext(3, "terrierContext")
+    private val terrierContext = newFixedThreadPoolContext(3, "terrierContext")
 
     private val repositories = mapOf(
         ELASTICSEARCH to ElasticsearchRepository(esContext),
-//        TERRIER to TerrierRepository(terrierContext)
+        TERRIER to TerrierRepository(terrierContext)
     )
 
     private val queryRepository = TopicRepository()
