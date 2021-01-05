@@ -185,7 +185,7 @@ class ElasticsearchRepository (
 
     private suspend fun submit(query: String, index: String) = withContext(context) {
         SearchSourceBuilder()
-            .query(QueryBuilders.multiMatchQuery(query, "title", "content"))
+            .query(QueryBuilders.multiMatchQuery(query, "title", "abstract", "keywords", "meshHeadings"))
             .size(1000)
             .let { SubmitAsyncSearchRequest(it, index) }
             .let {
