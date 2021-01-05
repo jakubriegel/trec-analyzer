@@ -1,9 +1,11 @@
 package eu.jrie.put.trec.domain.index
 
+import com.fasterxml.jackson.module.kotlin.readValue
 import eu.jrie.put.trec.domain.Article
-import eu.jrie.put.trec.domain.readArticles
+import eu.jrie.put.trec.infra.Articles
 import eu.jrie.put.trec.infra.config
 import eu.jrie.put.trec.infra.jsonMapper
+import eu.jrie.put.trec.infra.xmlMapper
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.withIndex
@@ -20,11 +22,10 @@ import org.terrier.structures.IndexUtil
 import org.terrier.structures.indexing.classical.BasicIndexer
 import org.terrier.structures.merging.StructureMerger
 import org.terrier.utility.ApplicationSetup
-import java.util.Spliterator.ORDERED
-import java.util.Spliterators.spliterator
+import java.io.File
 import java.util.UUID.randomUUID
 import java.util.concurrent.ForkJoinPool
-import java.util.stream.StreamSupport.stream
+import java.util.stream.Stream
 import kotlin.coroutines.CoroutineContext
 
 
@@ -67,17 +68,25 @@ fun initTerrier() {
     indexThreaded()
 }
 
+fun readArticlesCool(articlesPath: String = "/corpus"): Stream<Sequence<Article>> {
+    val n = config.getLong("init.corpusFiles")
+    return File(articlesPath).listFiles()!!
+        .toList()
+        .stream()
+        .let { if (n > 0) it.limit(n) else it }
+        .map { logger.info("readText"); it.readText() }
+        .map { logger.info("xmlMapper"); xmlMapper.readValue<Articles>(it) }
+        .map { it.data }
+}
+
 private fun indexThreaded() {
     val nThreads = config.getInt("terrier.init.workers")
 
     val pool = ForkJoinPool(nThreads)
     val action: () -> String = {
         logger.info("Terrier index creation started")
-        val (size, articlesSequence) = readArticles()
-        articlesSequence
-            .iterator()
-            .let { spliterator(it, size.toLong(), ORDERED) }
-            .let { stream(it, true) }
+        readArticlesCool()
+            .parallel()
             .map { articles ->
                 logger.info("map")
                 val prefix = nextPrefix
