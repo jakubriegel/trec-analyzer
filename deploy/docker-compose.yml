@@ -4,7 +4,8 @@ services:
     build:
       context: ../trec-service
     environment: 
-      TREC_INIT_INDEX: 0
+      TREC_INIT_TERRIER: 0
+      TREC_INIT_ES: 0
       TREC_SERVER: 1
     ports:
       - "8001:8001"
