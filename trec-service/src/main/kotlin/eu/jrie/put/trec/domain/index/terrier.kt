@@ -69,7 +69,6 @@ fun initTerrier() {
 
 private fun indexThreaded() {
     val nThreads = config.getInt("terrier.init.workers")
-    val chunkSize = config.getInt("terrier.init.chunkSize")
 
     val pool = ForkJoinPool(nThreads)
     val action: () -> String = {
