@@ -25,25 +25,13 @@ data class EvalResult (
     val value: String
 )
 
-private const val QRELS_FILE_PATH = "/qrels/qrels2020"
 private val WORKDIR = File("/")
 private val RESULT_DELIMITER_REGEX = Regex("[ \t]+")
 
-private val qrels = File(QRELS_FILE_PATH)
-    .readLines()
-    .map { it.split(" ") }
-    .map { (topicId, _, documentId, isRelevant) ->
-        Rel(topicId, documentId, isRelevant != "0")
-    }
-
 class EvaluationService {
 
-    fun validate(topicId: Int, documentId: Int): Boolean? = validate(topicId.toString(), documentId.toString())
-    private fun validate(topicId: String, documentId: String): Boolean? =
-        qrels.find { it.topicId == topicId && it.documentId == documentId }?.relevant
-
-    fun evaluate(runName: String, data: List<EvaluationData>): Triple<List<EvalResult>, String, String> {
-        val (results, log) = runEvaluation(runName, data)
+    fun evaluate(runName: String, qrelsSet: String, data: List<EvaluationData>): Triple<List<EvalResult>, String, String> {
+        val (results, log) = runEvaluation(runName, qrelsSet, data)
         val latex = """
             \begin{tabular}{ |c|c| } 
              \hline
@@ -54,13 +42,13 @@ class EvaluationService {
         return Triple(results, log, latex)
     }
 
-    private fun runEvaluation(name: String, data: List<EvaluationData>): Pair<List<EvalResult>, String> {
+    private fun runEvaluation(name: String, qrelsSet: String, data: List<EvaluationData>): Pair<List<EvalResult>, String> {
         val dataFile = File("/data_${UUID.randomUUID()}")
         data.asSequence()
             .map { "${it.topicId} Q0 ${it.documentId} ${it.rank} ${it.score} $name\n" }
             .forEach { dataFile.appendText(it) }
 
-        val cmd = "/trec_eval/trec_eval -m all_trec $QRELS_FILE_PATH ${dataFile.absolutePath}".split(" ")
+        val cmd = "/trec_eval/trec_eval -m all_trec /qrels/$qrelsSet ${dataFile.absolutePath}".split(" ")
         val evaluation = ProcessBuilder(cmd)
             .directory(WORKDIR)
             .redirectOutput(PIPE)

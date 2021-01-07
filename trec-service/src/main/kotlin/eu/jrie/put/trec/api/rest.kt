@@ -72,17 +72,10 @@ fun startServer() {
             }
 
             route("/evaluate") {
-                get("/qrels") {
-                    val documentId = call.request.queryParameters["documentId"]!!.toInt()
-                    val topicId = call.request.queryParameters["topicId"]!!.toInt()
-
-                    val result = evaluationService.validate(topicId, documentId)
-                    call.respond(EvaluateQrelsResponse(documentId, topicId, result))
-                }
-
                 route("/topics") {
                     suspend fun PipelineContext<Unit, ApplicationCall>.handleEvaluateTopics(
                         runName: String,
+                        qrelsSet: String,
                         matchesData: Flow<Pair<Int, Flow<ArticleMatch>>>
                     ) {
                         val data = matchesData.flatMapMerge { (topicId, matches) ->
@@ -92,7 +85,7 @@ fun startServer() {
                         }.toList()
 
                         try {
-                            val (results, log, latex) = evaluationService.evaluate(runName, data)
+                            val (results, log, latex) = evaluationService.evaluate(runName, qrelsSet, data)
                             call.respond(EvaluateTopicsResponse(results, log, latex))
                         } catch (e: TrecEvalException) {
                             call.respond(InternalServerError, e.message as Any)
@@ -112,7 +105,7 @@ fun startServer() {
                             ) }
                             .map { (query, matches) -> query.id to matches }
 
-                        handleEvaluateTopics(request.name, matches)
+                        handleEvaluateTopics(request.name, request.qrelsSet, matches)
                     }
 
                     post("/all") {
@@ -124,7 +117,7 @@ fun startServer() {
                             algorithm = request.options.algorithm
                         )
 
-                        handleEvaluateTopics(request.name, matches)
+                        handleEvaluateTopics(request.name, request.qrelsSet, matches)
                     }
                 }
             }

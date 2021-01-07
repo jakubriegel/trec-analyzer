@@ -30,21 +30,17 @@ data class QueryResponse (
     val documents: List<ArticleMatch>
 )
 
-data class EvaluateQrelsResponse (
-    val documentId: Int,
-    val topicId: Int,
-    val isRelevant: Boolean?
-)
-
 data class EvaluateTopicsRequest (
     val name: String,
     val topics: List<TopicMessage>,
+    val qrelsSet: String,
     val options: QueryOptions
 )
 
 data class EvaluateAllTopicsRequest (
     val name: String,
     val topicSet: String,
+    val qrelsSet: String,
     val options: QueryOptions
 )
 
