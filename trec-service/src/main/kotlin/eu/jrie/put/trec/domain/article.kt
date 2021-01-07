@@ -5,6 +5,7 @@ import eu.jrie.put.trec.infra.Articles
 import eu.jrie.put.trec.infra.config
 import eu.jrie.put.trec.infra.xmlMapper
 import java.io.File
+import java.util.stream.Stream
 
 data class Article(
     val id: Int,
@@ -21,11 +22,21 @@ data class MeshHeading(
 
 private const val DEFAULT_ARTICLES_PATH = "/corpus"
 
-fun readArticles(articlesPath: String = DEFAULT_ARTICLES_PATH): Pair<Int, Sequence<Sequence<Article>>> {
-    val n = config.getInt("init.corpusFiles")
-    val files =  File(articlesPath).listFiles()!!
-    return files.size to files.asSequence()
-        .let { if (n > 0) it.take(n) else it }
+private val filesLimit = config.getInt("init.corpusFiles")
+
+private val articlesFiles: List<File>
+    get() = File(DEFAULT_ARTICLES_PATH).listFiles()!!
+        .let { if (filesLimit > 0) it.take(filesLimit) else it.toList() }
+
+fun readArticles(): Sequence<Sequence<Article>> {
+    return articlesFiles.asSequence()
+        .map { it.readText() }
+        .map { xmlMapper.readValue<Articles>(it) }
+        .map { it.data }
+}
+
+fun readArticlesStream(): Stream<Sequence<Article>> {
+    return articlesFiles.stream()
         .map { it.readText() }
         .map { xmlMapper.readValue<Articles>(it) }
         .map { it.data }
