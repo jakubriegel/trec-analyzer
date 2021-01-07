@@ -88,20 +88,20 @@ private tailrec suspend fun pingEs() {
     }
 }
 
-private suspend fun createEsIndexes() {
+private fun createEsIndexes() {
     createIndex("trec_bm25", """
         {
             "type": "BM25",
-            "b": 0.75, 
-            "k1": 1.2
+            "b": ${config.getDouble("es.bm25.b")}, 
+            "k1": ${config.getDouble("es.bm25.k")}
         }
     """)
     createIndex("trec_dfr", """
         {
             "type": "DFR",
-            "basic_model": "g", 
-            "after_effect": "b",
-            "normalization": "h2"
+            "basic_model": "${config.getString("es.dfr.basic_model")}", 
+            "after_effect": "${config.getString("es.dfr.after_effect")}",
+            "normalization": "${config.getString("es.dfr.normalization")}"
         }
     """)
 }
