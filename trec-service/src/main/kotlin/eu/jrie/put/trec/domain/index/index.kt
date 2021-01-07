@@ -30,7 +30,7 @@ class IndexService {
         TERRIER to TerrierRepository(terrierContext)
     )
 
-    private val queryRepository = TopicRepository()
+    private val topicRepository = TopicRepository()
 
     suspend fun find(query: String, engine: IndexEngine, algorithm: IndexAlgorithm): Flow<ArticleMatch> {
         return repositories.getValue(engine)
@@ -41,14 +41,14 @@ class IndexService {
         return find(topic.asText(), engine, algorithm)
     }
 
-    suspend fun findByTopicId(topicId: Int, engine: IndexEngine, algorithm: IndexAlgorithm): Pair<Topic, Flow<ArticleMatch>> {
-        val topic = queryRepository.get(topicId)
+    suspend fun findByTopic(topicId: Int, topicSet: String, engine: IndexEngine, algorithm: IndexAlgorithm): Pair<Topic, Flow<ArticleMatch>> {
+        val topic = topicRepository.get(topicId, topicSet)
         return topic to find(topic.asText(), engine, algorithm)
     }
 
     @FlowPreview
-    suspend fun findForAllQueries(engine: IndexEngine, algorithm: IndexAlgorithm): Flow<Pair<Int, Flow<ArticleMatch>>> {
-        return queryRepository.getAll()
+    suspend fun findForAllTopics(topicSet: String, engine: IndexEngine, algorithm: IndexAlgorithm): Flow<Pair<Int, Flow<ArticleMatch>>> {
+        return topicRepository.getAll(topicSet)
             .asFlow()
             .map { it.id to find(it, engine, algorithm) }
     }

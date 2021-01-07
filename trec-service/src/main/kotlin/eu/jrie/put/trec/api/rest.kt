@@ -58,8 +58,9 @@ fun startServer() {
                 post("/topic") {
                     val request: QueryRequest = call.receive()
 
-                    val (topic, matches) = indexService.findByTopicId(
-                        topicId = request.topicId,
+                    val (topic, matches) = indexService.findByTopic(
+                        topicId = request.topic.id,
+                        topicSet = request.topic.set,
                         engine = request.options.engine,
                         algorithm = request.options.algorithm
                     )
@@ -101,9 +102,14 @@ fun startServer() {
                     post {
                         val request: EvaluateTopicsRequest = call.receive()
 
-                        val matches = request.topicsIds
+                        val matches = request.topics
                             .asFlow()
-                            .map { indexService.findByTopicId(it, request.options.engine, request.options.algorithm) }
+                            .map { indexService.findByTopic(
+                                topicId = it.id,
+                                topicSet = it.set,
+                                engine = request.options.engine,
+                                algorithm = request.options.algorithm
+                            ) }
                             .map { (query, matches) -> query.id to matches }
 
                         handleEvaluateTopics(request.name, matches)
@@ -112,7 +118,8 @@ fun startServer() {
                     post("/all") {
                         val request: EvaluateAllTopicsRequest = call.receive()
 
-                        val matches = indexService.findForAllQueries(
+                        val matches = indexService.findForAllTopics(
+                            topicSet = request.topicSet,
                             engine = request.options.engine,
                             algorithm = request.options.algorithm
                         )

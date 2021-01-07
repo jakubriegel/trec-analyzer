@@ -16,10 +16,11 @@ data class Topic (
 )
 
 class TopicRepository {
-        private val topics: List<Topic> = xmlMapper.readValue<Topics>(File("/topics/topics2020.xml"))
-                .data
-                .toList()
 
-        fun get(id: Int) = topics.find { it.id == id }!!
-        fun getAll() = topics.toList()
+        fun get(id: Int, set: String) = getTopicsFromSet(set).find { it.id == id }!!
+        fun getAll(set: String) = getTopicsFromSet(set).toList()
+
+        private fun getTopicsFromSet(set: String) = File("/topics/$set.xml")
+                .let { xmlMapper.readValue<Topics>(it) }
+                .data
 }

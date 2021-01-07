@@ -14,8 +14,13 @@ data class CustomQueryResponse (
     val documents: List<ArticleMatch>
 )
 
+data class TopicMessage (
+    val id: Int,
+    val set: String
+)
+
 data class QueryRequest (
-    val topicId: Int,
+    val topic: TopicMessage,
     val options: QueryOptions
 )
 
@@ -33,12 +38,13 @@ data class EvaluateQrelsResponse (
 
 data class EvaluateTopicsRequest (
     val name: String,
-    val topicsIds: List<Int>,
+    val topics: List<TopicMessage>,
     val options: QueryOptions
 )
 
 data class EvaluateAllTopicsRequest (
     val name: String,
+    val topicSet: String,
     val options: QueryOptions
 )
 
@@ -53,17 +59,10 @@ data class QueryOptions (
     val engine: IndexEngine
 )
 
-data class IndexType (
-    val engine: IndexEngine,
-    val algorithm: IndexAlgorithm
-)
-
 enum class IndexEngine {
     ELASTICSEARCH, TERRIER
 }
 
 enum class IndexAlgorithm {
-    BM25,
-    DFR,
-    BM25_PLUS_DFR,
+    BM25, DFR, BM25_PLUS_DFR,
 }
