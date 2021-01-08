@@ -1,0 +1,19 @@
+{
+	"id": "21658f11-8920-4cc9-88ad-eeb6d8b49277",
+	"values": [
+		{
+			"key": "algorithm",
+			"value": "BM25",
+			"enabled": true
+		},
+		{
+			"key": "engine",
+			"value": "TERRIER",
+			"enabled": true
+		}
+	],
+	"name": "trec Globals",
+	"_postman_variable_scope": "globals",
+	"_postman_exported_at": "2021-01-07T20:13:10.020Z",
+	"_postman_exported_using": "Postman/7.36.1"
+}
