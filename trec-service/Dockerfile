@@ -11,7 +11,7 @@ RUN make
 #COPY corpus /corpus
 COPY qrels /qrels
 COPY topics /topics
-RUN mkdir /terrier_data
+#RUN mkdir /terrier_data
 
 FROM gradle:6.7.1-jdk11 as build-stage
 
@@ -34,11 +34,11 @@ COPY --from=setup-stage /trec_eval /trec_eval
 #COPY --from=setup-stage /corpus /corpus
 COPY --from=setup-stage /qrels /qrels
 COPY --from=setup-stage /topics /topics
-COPY --from=setup-stage /terrier_data /terrier_data
+#COPY --from=setup-stage /terrier_data /terrier_data
 
 COPY config/application.conf /application.conf
 COPY --from=build-stage /app/build/libs/trec-service.jar /trec-service.jar
 
 EXPOSE 8001
 
-CMD java -jar /trec-service.jar
+CMD java -Xmx100G -jar /trec-service.jar

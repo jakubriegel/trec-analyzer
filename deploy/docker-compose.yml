@@ -4,13 +4,14 @@ services:
     build:
       context: ../trec-service
     environment: 
-      TREC_INIT_TERRIER: 0
+      TREC_INIT_TERRIER: 1 
       TREC_INIT_ES: 0
       TREC_SERVER: 1
     ports:
       - "8001:8001"
     volumes:
       - //storage/Trec2020/raw_data/:/corpus
+      - //storage/jrie/terrier:/terrier_data
     depends_on:
       - elasticsearch
   elasticsearch:
