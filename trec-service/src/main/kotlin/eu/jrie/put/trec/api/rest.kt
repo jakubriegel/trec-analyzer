@@ -1,14 +1,10 @@
 package eu.jrie.put.trec.api
 
-import eu.jrie.put.trec.api.IndexEngine.ELASTICSEARCH
-import eu.jrie.put.trec.api.IndexEngine.TERRIER
 import eu.jrie.put.trec.domain.eval.EvaluationData
+import eu.jrie.put.trec.domain.eval.EvaluationService
 import eu.jrie.put.trec.domain.eval.TrecEvalException
-import eu.jrie.put.trec.domain.eval.evaluate
-import eu.jrie.put.trec.domain.eval.validate
-import eu.jrie.put.trec.domain.index.ElasticsearchRepository
-import eu.jrie.put.trec.domain.index.TerrierRepository
-import eu.jrie.put.trec.domain.query.QueryRepository
+import eu.jrie.put.trec.domain.index.ArticleMatch
+import eu.jrie.put.trec.domain.index.IndexService
 import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.http.*
@@ -19,88 +15,111 @@ import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.util.pipeline.*
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.newFixedThreadPoolContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.flatMapMerge
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 
 
 @FlowPreview
 @ObsoleteCoroutinesApi
 fun startServer() {
     embeddedServer(Netty, port = 8001) {
+
         install(CallLogging)
         install(ContentNegotiation) {
             register(ContentType.Application.Json, JacksonConverter())
         }
 
-        val esContext = newFixedThreadPoolContext(3, "esContext")
-        val terrierContext = newFixedThreadPoolContext(3, "terrierContext")
-
-        val repositories = mapOf(
-            ELASTICSEARCH to ElasticsearchRepository(esContext),
-            TERRIER to TerrierRepository(terrierContext)
-        )
-
-        val queryRepository = QueryRepository()
+        val indexService = IndexService()
+        val evaluationService = EvaluationService()
 
         routing {
-            post("/find") {
-                val request: CustomQueryRequest = call.receive()
-                val results = repositories.getValue(request.options.engine).find(request.query, request.options.algorithm)
-                call.respond(
-                    CustomQueryResponse(request, results)
-                )
+            route("/find") {
+                post {
+                    val request: CustomQueryRequest = call.receive()
+
+                    val matches = indexService.find(
+                        query = request.query,
+                        engine = request.options.engine,
+                        algorithm = request.options.algorithm
+                    ).take(10)
+
+                    call.respond(
+                        CustomQueryResponse(request, matches.toList())
+                    )
+                }
+
+                post("/topic") {
+                    val request: QueryRequest = call.receive()
+
+                    val (topic, matches) = indexService.findByTopic(
+                        topicId = request.topic.id,
+                        topicSet = request.topic.set,
+                        engine = request.options.engine,
+                        algorithm = request.options.algorithm
+                    )
+
+                    call.respond(
+                        QueryResponse(topic, request.options, matches.toList())
+                    )
+                }
             }
 
-            post("/find/query") {
-                val request: QueryRequest = call.receive()
-                val topic = queryRepository.get(request.queryId)
-                    .also { environment.log.info("Query ${request.queryId} resolved as $it.") }
-                val results = repositories.getValue(request.options.engine).find(topic.disease, request.options.algorithm)
-                call.respond(
-                    QueryResponse(topic, request.options, results)
-                )
-            }
-
-            post("/validate") {
-                val documentId = call.request.queryParameters["documentId"]!!
-                val queryId = call.request.queryParameters["queryId"]!!
-                val isRelevant = call.request.queryParameters["isRelevant"]!!.let { it == "1" }
-
-                call.respond(validate(queryId, documentId) ?: "404")
-            }
-
-            post("/evaluate") {
-                val request: EvaluationRequest = call.receive()
-                request.queriesIds
-                    .asFlow()
-                    .map { queryRepository.get(it) }
-                    .map { it.id to repositories.getValue(request.options.engine).find(it.disease, request.options.algorithm) }
-                    .flatMapMerge { (queryId, matches) ->
-                        matches.asFlow()
-                            .withIndex()
-                            .map { (rank, match) ->
-                                EvaluationData(queryId, match.article.id, rank, match.score)
+            route("/evaluate") {
+                route("/topics") {
+                    suspend fun PipelineContext<Unit, ApplicationCall>.handleEvaluateTopics(
+                        runName: String,
+                        qrelsSet: String,
+                        matchesData: Flow<Pair<Int, Flow<ArticleMatch>>>
+                    ) {
+                        val data = matchesData.flatMapMerge { (topicId, matches) ->
+                            matches.map {
+                                EvaluationData(topicId, it.article.id, it.rank, it.score)
                             }
-                    }
-                    .toList()
-                    .let { data ->
-                        try {
-                            val (results, log) = evaluate(request.name, data)
-                            val latex = """
-                                \begin{tabular}{ |c|c| } 
-                                 \hline
-                                 ${results.joinToString { "${it.name} & ${it.value} \\\\\n" }}
-                                 \hline
-                                \end{tabular}
-                            """.trimIndent()
+                        }.toList()
 
-                            call.respond(EvaluationResponse(results, log, latex))
+                        try {
+                            val (results, log, latex) = evaluationService.evaluate(runName, qrelsSet, data)
+                            call.respond(EvaluateTopicsResponse(results, log, latex))
                         } catch (e: TrecEvalException) {
                             call.respond(InternalServerError, e.message as Any)
                         }
                     }
+
+                    post {
+                        val request: EvaluateTopicsRequest = call.receive()
+
+                        val matches = request.topics
+                            .asFlow()
+                            .map { indexService.findByTopic(
+                                topicId = it.id,
+                                topicSet = it.set,
+                                engine = request.options.engine,
+                                algorithm = request.options.algorithm
+                            ) }
+                            .map { (query, matches) -> query.id to matches }
+
+                        handleEvaluateTopics(request.name, request.qrelsSet, matches)
+                    }
+
+                    post("/all") {
+                        val request: EvaluateAllTopicsRequest = call.receive()
+
+                        val matches = indexService.findForAllTopics(
+                            topicSet = request.topicSet,
+                            engine = request.options.engine,
+                            algorithm = request.options.algorithm
+                        )
+
+                        handleEvaluateTopics(request.name, request.qrelsSet, matches)
+                    }
+                }
             }
         }
     }.start(wait = true)

@@ -2,7 +2,7 @@ package eu.jrie.put.trec.api
 
 import eu.jrie.put.trec.domain.eval.EvalResult
 import eu.jrie.put.trec.domain.index.ArticleMatch
-import eu.jrie.put.trec.domain.query.Query
+import eu.jrie.put.trec.domain.query.Topic
 
 data class CustomQueryRequest (
     val query: String,
@@ -14,24 +14,37 @@ data class CustomQueryResponse (
     val documents: List<ArticleMatch>
 )
 
+data class TopicMessage (
+    val id: Int,
+    val set: String
+)
+
 data class QueryRequest (
-    val queryId: Int,
+    val topic: TopicMessage,
     val options: QueryOptions
 )
 
 data class QueryResponse (
-    val query: Query,
+    val topic: Topic,
     val options: QueryOptions,
     val documents: List<ArticleMatch>
 )
 
-data class EvaluationRequest (
+data class EvaluateTopicsRequest (
     val name: String,
-    val queriesIds: List<Int>,
+    val topics: List<TopicMessage>,
+    val qrelsSet: String,
     val options: QueryOptions
 )
 
-data class EvaluationResponse (
+data class EvaluateAllTopicsRequest (
+    val name: String,
+    val topicSet: String,
+    val qrelsSet: String,
+    val options: QueryOptions
+)
+
+data class EvaluateTopicsResponse (
     val results: List<EvalResult>,
     val log: String,
     val latex: String
@@ -42,17 +55,10 @@ data class QueryOptions (
     val engine: IndexEngine
 )
 
-data class IndexType (
-    val engine: IndexEngine,
-    val algorithm: IndexAlgorithm
-)
-
 enum class IndexEngine {
     ELASTICSEARCH, TERRIER
 }
 
 enum class IndexAlgorithm {
-    BM25,
-    DFR,
-    BM25_PLUS_DFR,
+    BM25, DFR, BM25_PLUS_DFR,
 }

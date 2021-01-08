@@ -6,13 +6,13 @@ import java.util.*
 import java.util.concurrent.TimeUnit.SECONDS
 
 private data class Rel (
-        val queryId: String,
+        val topicId: String,
         val documentId: String,
         val relevant: Boolean
 )
 
 data class EvaluationData (
-        val queryId: Int,
+        val topicId: Int,
         val documentId: Int,
         val rank: Int,
         val score: Float
@@ -25,53 +25,57 @@ data class EvalResult (
     val value: String
 )
 
-private const val QRELS_FILE_PATH = "/qrels/qrels2020"
 private val WORKDIR = File("/")
 private val RESULT_DELIMITER_REGEX = Regex("[ \t]+")
 
-private val qrels = File(QRELS_FILE_PATH)
-    .readLines()
-    .map { it.split(" ") }
-    .map { (queryId, _, documentId, isRelevant) ->
-        Rel(queryId, documentId, isRelevant != "0")
+class EvaluationService {
+
+    fun evaluate(runName: String, qrelsSet: String, data: List<EvaluationData>): Triple<List<EvalResult>, String, String> {
+        val (results, log) = runEvaluation(runName, qrelsSet, data)
+        val latex = """
+            \begin{tabular}{ |c|c| } 
+             \hline
+             ${results.joinToString { "${it.name} & ${it.value} \\\\\n" }}
+             \hline
+            \end{tabular}
+        """.trimIndent()
+        return Triple(results, log, latex)
     }
 
-fun validate(queryId: String, documentId: String): Boolean? =
-    qrels.find { it.queryId == queryId && it.documentId == documentId }?.relevant
+    private fun runEvaluation(name: String, qrelsSet: String, data: List<EvaluationData>): Pair<List<EvalResult>, String> {
+        val dataFile = File("/data_${UUID.randomUUID()}")
+        data.asSequence()
+            .map { "${it.topicId} Q0 ${it.documentId} ${it.rank} ${it.score} $name\n" }
+            .forEach { dataFile.appendText(it) }
 
-fun evaluate(name: String, data: List<EvaluationData>): Pair<List<EvalResult>, String> {
-    val dataFile = File("/data_${UUID.randomUUID()}")
-    data.asSequence()
-        .map { "${it.queryId} Q0 ${it.documentId} ${it.rank} ${it.score} $name\n" }
-        .forEach { dataFile.appendText(it) }
+        val cmd = "/trec_eval/trec_eval -m all_trec /qrels/$qrelsSet ${dataFile.absolutePath}".split(" ")
+        val evaluation = ProcessBuilder(cmd)
+            .directory(WORKDIR)
+            .redirectOutput(PIPE)
+            .redirectError(PIPE)
+            .start()
+            .apply { waitFor(30, SECONDS) }
 
-    val cmd = "/trec_eval/trec_eval -m all_trec $QRELS_FILE_PATH ${dataFile.absolutePath}".split(" ")
-    val evaluation = ProcessBuilder(cmd)
-        .directory(WORKDIR)
-        .redirectOutput(PIPE)
-        .redirectError(PIPE)
-        .start()
-        .apply { waitFor(30, SECONDS) }
+        dataFile.delete()
 
-    dataFile.delete()
+        evaluation.errorStream
+            .bufferedReader()
+            .readText()
+            .let {
+                if (it.isNotBlank()) throw TrecEvalException("Error during eval: $it")
+            }
 
-    evaluation.errorStream
-        .bufferedReader()
-        .readText()
-        .let {
-            if (it.isNotBlank()) throw TrecEvalException("Error during eval: $it")
-        }
+        val log = evaluation.inputStream
+            .bufferedReader()
+            .readText()
+        val results = log.lineSequence()
+            .drop(1)
+            .map { it.replace(RESULT_DELIMITER_REGEX, " ") }
+            .map { it.split(" ") }
+            .filter { it.size >= 3 }
+            .map { (name, _, value) -> EvalResult(name, value) }
+            .toList()
 
-    val log = evaluation.inputStream
-        .bufferedReader()
-        .readText()
-    val results = log.lineSequence()
-        .drop(1)
-        .map { it.replace(RESULT_DELIMITER_REGEX, " ") }
-        .map { it.split(" ") }
-        .filter { it.size >= 3 }
-        .map { (name, _, value) -> EvalResult(name, value) }
-        .toList()
-
-    return results to log
+        return results to log
+    }
 }

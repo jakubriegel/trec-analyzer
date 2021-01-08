@@ -4,21 +4,23 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import eu.jrie.put.trec.infra.xmlMapper
 import java.io.File
 
-data class Queries (
-        val data: Sequence<Query>
+data class Topics (
+        val data: Sequence<Topic>
 )
 
-data class Query (
+data class Topic (
         val id: Int,
         val disease: String,
         val gene: String,
         val treatment: String
 )
 
-class QueryRepository {
-        private val queries: List<Query> = xmlMapper.readValue<Queries>(File("/topics/topics2020.xml"))
-                .data
-                .toList()
+class TopicRepository {
 
-        fun get(id: Int): Query = queries.find { it.id == id }!!
+        fun get(id: Int, set: String) = getTopicsFromSet(set).find { it.id == id }!!
+        fun getAll(set: String) = getTopicsFromSet(set).toList()
+
+        private fun getTopicsFromSet(set: String) = File("/topics/$set.xml")
+                .let { xmlMapper.readValue<Topics>(it) }
+                .data
 }

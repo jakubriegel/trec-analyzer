@@ -1,7 +1,8 @@
 package eu.jrie.put.trec.domain.index
 
 import eu.jrie.put.trec.domain.Article
-import eu.jrie.put.trec.domain.readArticles
+import eu.jrie.put.trec.domain.readArticlesStream
+import eu.jrie.put.trec.infra.config
 import eu.jrie.put.trec.infra.jsonMapper
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.map
@@ -15,8 +16,15 @@ import org.terrier.indexing.FlatJSONDocument
 import org.terrier.querying.ManagerFactory
 import org.terrier.querying.SearchRequest.CONTROL_WMODEL
 import org.terrier.structures.IndexOnDisk
+import org.terrier.structures.IndexOnDisk.createIndex
+import org.terrier.structures.IndexOnDisk.createNewIndex
+import org.terrier.structures.IndexUtil.deleteIndex
+import org.terrier.structures.IndexUtil.renameIndex
 import org.terrier.structures.indexing.classical.BasicIndexer
+import org.terrier.structures.merging.StructureMerger
 import org.terrier.utility.ApplicationSetup
+import java.util.UUID.randomUUID
+import java.util.concurrent.ForkJoinPool
 import kotlin.coroutines.CoroutineContext
 
 
@@ -26,11 +34,15 @@ private data class FlatArticle(
     val process: String = "text"
 )
 
-private fun Article.flatten() = FlatArticle(id.toString(), "$title $abstract")
+private fun Article.flatten() = FlatArticle(
+    id.toString(), "$title $abstract ${keywords.joinToString(" ")} ${meshHeadings.map { "${it.name} ${it.description}" }.joinToString(" ")}"
+)
 
-class FlatArticleCollection : org.terrier.indexing.Collection {
+class FlatArticleCollection(
+    articles: Sequence<Article>
+) : org.terrier.indexing.Collection {
 
-    private val flatArticles: Iterator<Document> = readArticles()
+    private val flatArticles: Iterator<Document> = articles
         .map { it.flatten() }
         .map { jsonMapper.writeValueAsString(it) }
         .map { FlatJSONDocument(it) }
@@ -45,6 +57,8 @@ class FlatArticleCollection : org.terrier.indexing.Collection {
 
 private const val INDEX_PATH = "/terrier_data"
 private const val INDEX_PREFIX = "trec"
+private val nextPrefix: String
+    get() = "${INDEX_PREFIX}_${randomUUID()}"
 
 fun initTerrier() {
     logger.info("Initializing terrier index")
@@ -52,27 +66,63 @@ fun initTerrier() {
     ApplicationSetup.setProperty("indexer.meta.forward.keys", "id")
     ApplicationSetup.setProperty("indexer.meta.forward.keylens", "20")
 
-    val indexer = BasicIndexer(INDEX_PATH, INDEX_PREFIX)
-    val coll = FlatArticleCollection()
-    indexer.index(arrayOf(coll))
+    indexThreaded()
 }
 
-class TerrierRepository (
+private fun mergeIndices(first: IndexOnDisk, second: IndexOnDisk): IndexOnDisk {
+    val newIndex = createNewIndex(INDEX_PATH, nextPrefix)
+    StructureMerger(first, second, newIndex).mergeStructures()
+    first.close()
+    second.close()
+    deleteIndex (INDEX_PATH, first.prefix)
+    deleteIndex(INDEX_PATH, second.prefix)
+    return newIndex
+}
+
+private fun indexThreaded() {
+    val nThreads = config.getInt("terrier.init.workers")
+    val action: () -> String = {
+        logger.info("Terrier index creation started")
+        readArticlesStream()
+            .parallel()
+            .map { articles ->
+                logger.info("indexing chunk")
+                val prefix = nextPrefix
+                val indexer = BasicIndexer(INDEX_PATH, prefix)
+                val collection = FlatArticleCollection(articles)
+                indexer.index(arrayOf(collection))
+                createIndex(INDEX_PATH, prefix)
+            }
+            .reduce { first, second ->
+                logger.info("reduce indices")
+                mergeIndices(first, second)
+            }
+            .map { renameIndex(INDEX_PATH, it.prefix, INDEX_PATH, INDEX_PREFIX) }
+            .map { INDEX_PREFIX }
+            .get()
+    }
+    val masterPrefix = ForkJoinPool(nThreads).submit(action).get()
+    logger.info("Created terrier index: $masterPrefix")
+}
+
+class TerrierRepository(
     private val context: CoroutineContext
 ) : Repository() {
 
     private val elasticsearchRepository = ElasticsearchRepository(context)
-    private val index = IndexOnDisk.createIndex(INDEX_PATH, INDEX_PREFIX)
+    private val index = createIndex(INDEX_PATH, INDEX_PREFIX)
     private val queryingManager = runBlocking(context) { ManagerFactory.from(index.indexRef) }
 
     init {
-        ApplicationSetup.setProperty("querying.processes", "terrierql:TerrierQLParser,"
-                + "parsecontrols:TerrierQLToControls,"
-                + "parseql:TerrierQLToMatchingQueryTerms,"
-                + "matchopql:MatchingOpQLParser,"
-                + "applypipeline:ApplyTermPipeline,"
-                + "localmatching:LocalManager\$ApplyLocalMatching,"
-                + "filters:LocalManager\$PostFilterProcess")
+        ApplicationSetup.setProperty(
+            "querying.processes", "terrierql:TerrierQLParser,"
+                    + "parsecontrols:TerrierQLToControls,"
+                    + "parseql:TerrierQLToMatchingQueryTerms,"
+                    + "matchopql:MatchingOpQLParser,"
+                    + "applypipeline:ApplyTermPipeline,"
+                    + "localmatching:LocalManager\$ApplyLocalMatching,"
+                    + "filters:LocalManager\$PostFilterProcess"
+        )
 
         ApplicationSetup.setProperty("querying.postfilters", "decorate:org.terrier.querying.SimpleDecorate")
     }
@@ -102,7 +152,7 @@ class TerrierRepository (
             .withIndex()
             .map { (i, doc) ->
                 val article = elasticsearchRepository.get(doc.getMetadata("id"))
-                ArticleMatch(i+1, doc.score.toFloat(), article)
+                ArticleMatch(i + 1, doc.score.toFloat(), article)
             }
     }
 }
