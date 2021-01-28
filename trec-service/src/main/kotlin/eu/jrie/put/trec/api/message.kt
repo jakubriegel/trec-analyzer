@@ -60,5 +60,5 @@ enum class IndexEngine {
 }
 
 enum class IndexAlgorithm {
-    BM25, DFR, BM25_PLUS_DFR,
+    BM25, DFR, DFR_BM25, BM25_PLUS_DFR,
 }

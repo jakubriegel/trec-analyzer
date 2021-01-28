@@ -131,6 +131,8 @@ class TerrierRepository(
 
     override suspend fun findByBM25(query: String) = search(query, "BM25")
 
+    override suspend fun findByDFRBM25(query: String) = search(query, "DFR_BM25")
+
     private suspend fun search(query: String, model: String) = withContext(context) {
         logger.info("Querying terrier for \"$query\" by $model")
         val request = queryingManager.newSearchRequestFromQuery(query)

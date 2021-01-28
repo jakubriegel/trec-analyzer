@@ -4,6 +4,7 @@ import eu.jrie.put.trec.api.IndexAlgorithm
 import eu.jrie.put.trec.api.IndexAlgorithm.BM25
 import eu.jrie.put.trec.api.IndexAlgorithm.BM25_PLUS_DFR
 import eu.jrie.put.trec.api.IndexAlgorithm.DFR
+import eu.jrie.put.trec.api.IndexAlgorithm.DFR_BM25
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collect
@@ -20,6 +21,7 @@ abstract class Repository {
         return when (algorithm) {
             BM25 -> findByBM25(query)
             DFR -> findByDFR(query)
+            DFR_BM25 -> findByDFRBM25(query)
             BM25_PLUS_DFR -> findByBM25AndDFR(query)
         }
     }
@@ -27,6 +29,8 @@ abstract class Repository {
     protected abstract suspend fun findByDFR(query: String): Flow<ArticleMatch>
 
     protected abstract suspend fun findByBM25(query: String): Flow<ArticleMatch>
+
+    protected abstract suspend fun findByDFRBM25(query: String): Flow<ArticleMatch>
 
     private suspend fun findByBM25AndDFR(query: String) = flow {
             findByBM25(query).collect { emit(it) }

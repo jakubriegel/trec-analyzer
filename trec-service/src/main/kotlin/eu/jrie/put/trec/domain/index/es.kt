@@ -8,6 +8,7 @@ import eu.jrie.put.trec.infra.jsonMapper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.consumeAsFlow
@@ -181,6 +182,8 @@ class ElasticsearchRepository (
     override suspend fun findByDFR(query: String) = submit(query, "trec_dfr")
 
     override suspend fun findByBM25(query: String) = submit(query, "trec_bm25")
+
+    override suspend fun findByDFRBM25(query: String): Flow<ArticleMatch> = TODO("Not yet implemented")
 
     private suspend fun submit(query: String, index: String) = withContext(context) {
         SearchSourceBuilder()
