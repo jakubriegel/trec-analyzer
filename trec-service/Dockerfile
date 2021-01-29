@@ -37,6 +37,7 @@ COPY --from=setup-stage /topics /topics
 #COPY --from=setup-stage /terrier_data /terrier_data
 
 COPY config/application.conf /application.conf
+COPY config/terrier.properties /etc/terrier.properties
 COPY --from=build-stage /app/build/libs/trec-service.jar /trec-service.jar
 
 EXPOSE 8001

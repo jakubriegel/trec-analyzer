@@ -28,22 +28,11 @@ import java.util.concurrent.ForkJoinPool
 import kotlin.coroutines.CoroutineContext
 
 
-private data class FlatArticle(
-    val id: String,
-    val text: String,
-    val process: String = "text"
-)
-
-private fun Article.flatten() = FlatArticle(
-    id.toString(), "$title $abstract ${keywords.joinToString(" ")} ${meshHeadings.map { "${it.name} ${it.description}" }.joinToString(" ")}"
-)
-
 class FlatArticleCollection(
     articles: Sequence<Article>
 ) : org.terrier.indexing.Collection {
 
     private val flatArticles: Iterator<Document> = articles
-        .map { it.flatten() }
         .map { jsonMapper.writeValueAsString(it) }
         .map { FlatJSONDocument(it) }
         .iterator()
