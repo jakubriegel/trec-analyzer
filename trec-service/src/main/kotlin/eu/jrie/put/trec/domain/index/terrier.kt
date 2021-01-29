@@ -21,7 +21,7 @@ import org.terrier.structures.IndexOnDisk.createNewIndex
 import org.terrier.structures.IndexUtil.deleteIndex
 import org.terrier.structures.IndexUtil.renameIndex
 import org.terrier.structures.indexing.classical.BasicIndexer
-import org.terrier.structures.merging.StructureMerger
+import org.terrier.structures.merging.BlockStructureMerger
 import org.terrier.utility.ApplicationSetup
 import java.util.UUID.randomUUID
 import java.util.concurrent.ForkJoinPool
@@ -63,7 +63,7 @@ private fun mergeIndices(first: IndexOnDisk, second: IndexOnDisk): IndexOnDisk {
     logger.info("Merging ${first.prefix} and ${second.prefix} into ${newIndex.prefix}")
     logger.info("First ${first.collectionStatistics}")
     logger.info("Second ${second.collectionStatistics}")
-    StructureMerger(first, second, newIndex).mergeStructures()
+    BlockStructureMerger(first, second, newIndex).mergeStructures()
     first.close()
     second.close()
     deleteIndex (INDEX_PATH, first.prefix)
