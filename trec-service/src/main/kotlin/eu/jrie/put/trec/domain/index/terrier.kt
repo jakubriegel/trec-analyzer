@@ -54,7 +54,6 @@ fun initTerrier() {
 
     ApplicationSetup.setProperty("indexer.meta.forward.keys", "id")
     ApplicationSetup.setProperty("indexer.meta.forward.keylens", "20")
-    ApplicationSetup.setProperty("FieldTags.process", "title,abstract,keywords,meshHeadings")
 
     indexThreaded()
 }
