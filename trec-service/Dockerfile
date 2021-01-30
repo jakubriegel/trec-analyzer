@@ -13,7 +13,7 @@ COPY qrels /qrels
 COPY topics /topics
 #RUN mkdir /terrier_data
 
-FROM gradle:6.7.1-jdk11 as build-stage
+FROM gradle:6.8.1-jdk11 as build-stage
 
 WORKDIR /app
 

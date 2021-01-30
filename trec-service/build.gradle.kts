@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm") version "1.4.21"
-    id("com.github.johnrengelman.shadow") version "5.0.0"
+    id("com.github.johnrengelman.shadow") version "5.2.0"
 }
 
 group = "eu.jrie.put.trec"
@@ -10,7 +10,7 @@ repositories {
     mavenCentral()
 }
 
-val ktorVersion = "1.5.0"
+val ktorVersion = "1.5.1"
 
 dependencies {
     // kotlin
@@ -23,14 +23,14 @@ dependencies {
     implementation("io.ktor:ktor-jackson:$ktorVersion")
 
     // jackson
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.12.0")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.12.1")
 
     // elastic
     implementation("org.elasticsearch.client:elasticsearch-rest-high-level-client:7.10.1")
 
     // terrier
-    implementation("org.terrier:terrier-core:5.3")
-    implementation("org.terrier:terrier-batch-indexers:5.3") {
+    implementation("org.terrier:terrier-core:5.4")
+    implementation("org.terrier:terrier-batch-indexers:5.4") {
         exclude("com.github.cmacdonald")
     }
 
