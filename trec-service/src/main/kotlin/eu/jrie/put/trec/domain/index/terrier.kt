@@ -1,6 +1,7 @@
 package eu.jrie.put.trec.domain.index
 
 import eu.jrie.put.trec.domain.Article
+import eu.jrie.put.trec.domain.MeshHeading
 import eu.jrie.put.trec.domain.readArticlesStream
 import eu.jrie.put.trec.infra.config
 import eu.jrie.put.trec.infra.jsonMapper
@@ -28,11 +29,23 @@ import java.util.concurrent.ForkJoinPool
 import kotlin.coroutines.CoroutineContext
 
 
+
+data class TerrierArticle(
+    val id: Int,
+    val title: String,
+    val abstract: String,
+    val keywords: List<String>,
+    val meshHeadings: List<MeshHeading>,
+    val process: String = "id,title,abstract,keywords,meshHeadings"
+)
+
+
 class FlatArticleCollection(
     articles: Sequence<Article>
 ) : org.terrier.indexing.Collection {
 
     private val flatArticles: Iterator<Document> = articles
+        .map { TerrierArticle(it.id, it.title, it.abstract, it.keywords, it.meshHeadings) }
         .map { jsonMapper.writeValueAsString(it) }
         .map { FlatJSONDocument(it) }
         .iterator()
