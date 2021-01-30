@@ -108,17 +108,11 @@ private fun mergeIndices(first: IndexOnDisk, second: IndexOnDisk): IndexOnDisk {
     logger.info("Merging ${first.prefix} and ${second.prefix} into ${newIndex.prefix}")
     logger.info("First\n${first.collectionStatistics}")
     logger.info("Second\n${second.collectionStatistics}")
-    second.setIndexProperty("index.inverted.fields.names", first.getIndexProperty("index.inverted.fields.names", null))
-//    logger.info("First\n${first.collectionStatistics}")
-    logger.info("Second after\n${second.collectionStatistics}")
     StructureMergerCustom(first, second, newIndex).mergeStructures()
     first.close()
     second.close()
 //    deleteIndex (INDEX_PATH, first.prefix)
 //    deleteIndex(INDEX_PATH, second.prefix)
-    newIndex.setIndexProperty("index.direct.fields.names", first.getIndexProperty("index.direct.fields.names", null))
-    newIndex.setIndexProperty("index.inverted.fields.names", first.getIndexProperty("index.inverted.fields.names", null))
-    newIndex.flush()
     return newIndex
 }
 
@@ -286,7 +280,7 @@ open class StructureMergerCustom(
             val numberOfDocs2 = srcIndex2.collectionStatistics.numberOfDocuments
             numberOfDocuments = numberOfDocs1 + numberOfDocs2
             val srcFieldCount1 = srcIndex1.collectionStatistics.numberOfFields
-            val srcFieldCount2 = srcIndex2.collectionStatistics.numberOfFields
+            val srcFieldCount2 = srcFieldCount1 // srcIndex2.collectionStatistics.numberOfFields
             if (srcFieldCount1 != srcFieldCount2) {
                 throw Error("FieldCounts in source indices must match")
             }
@@ -510,7 +504,7 @@ open class StructureMergerCustom(
             }
             val emptyPointer: BitIndexPointer = SimpleBitIndexPointer()
             val srcFieldCount1 = srcIndex1.getIntIndexProperty("index.direct.fields.count", 0)
-            val srcFieldCount2 = srcIndex1.getIntIndexProperty("index.direct.fields.count", 0)
+            val srcFieldCount2 = srcFieldCount1 // srcIndex1.getIntIndexProperty("index.direct.fields.count", 0)
             if (srcFieldCount1 != srcFieldCount2) {
                 metaBuilder.close()
                 throw Error("FieldCounts in source indices must match")
@@ -630,7 +624,7 @@ open class StructureMergerCustom(
             val docidInput1 = srcIndex1.getIndexStructureInputStream("document") as Iterator<DocumentIndexEntry>
             val metaInput1 = srcIndex1.getIndexStructureInputStream("meta") as Iterator<Array<String>>
             var srcFieldCount1 = srcIndex1.getIntIndexProperty("index.inverted.fields.count", 0)
-            val srcFieldCount2 = srcIndex2.getIntIndexProperty("index.inverted.fields.count", 0)
+            val srcFieldCount2 = srcFieldCount1// srcIndex2.getIntIndexProperty("index.inverted.fields.count", 0)
             if (srcFieldCount1 != srcFieldCount2) {
                 metaBuilder.close()
                 throw Error("FieldCounts in source indices must match")
@@ -747,6 +741,8 @@ open class StructureMergerCustom(
             t4 = System.currentTimeMillis()
             logger.info("merged direct files in " + ((t4 - t3) / 1000.0))
         }
+//        destIndex.setIndexProperty("index.inverted.fields.count", ""+ fieldCount)
+//        destIndex.setIndexProperty("index.inverted.fields.count", ""+ fieldCount)
         if (keepTermCodeMap) {
             //save up some memory
             termcodeHashmap!!.clear()
