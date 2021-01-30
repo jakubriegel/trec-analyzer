@@ -280,8 +280,8 @@ open class StructureMergerCustom(
             val numberOfDocs1 = srcIndex1.collectionStatistics.numberOfDocuments
             val numberOfDocs2 = srcIndex2.collectionStatistics.numberOfDocuments
             numberOfDocuments = numberOfDocs1 + numberOfDocs2
-            val srcFieldCount1 = srcIndex1.collectionStatistics.numberOfFields
-            val srcFieldCount2 = srcFieldCount1 // srcIndex2.collectionStatistics.numberOfFields
+            val srcFieldCount1 = 4 // srcIndex1.collectionStatistics.numberOfFields
+            val srcFieldCount2 = 4 //srcFieldCount1 // srcIndex2.collectionStatistics.numberOfFields
             if (srcFieldCount1 != srcFieldCount2) {
                 throw Error("FieldCounts in source indices must match")
             }
@@ -504,8 +504,8 @@ open class StructureMergerCustom(
                 throw Error("Meta fields in source indices must match")
             }
             val emptyPointer: BitIndexPointer = SimpleBitIndexPointer()
-            val srcFieldCount1 = srcIndex1.getIntIndexProperty("index.direct.fields.count", 0)
-            val srcFieldCount2 = srcFieldCount1 // srcIndex1.getIntIndexProperty("index.direct.fields.count", 0)
+            val srcFieldCount1 = 4 // srcIndex1.getIntIndexProperty("index.direct.fields.count", 0)
+            val srcFieldCount2 = 4 //srcFieldCount1 // srcIndex1.getIntIndexProperty("index.direct.fields.count", 0)
             if (srcFieldCount1 != srcFieldCount2) {
                 metaBuilder.close()
                 throw Error("FieldCounts in source indices must match")
@@ -624,8 +624,8 @@ open class StructureMergerCustom(
             //opening the first set of files.
             val docidInput1 = srcIndex1.getIndexStructureInputStream("document") as Iterator<DocumentIndexEntry>
             val metaInput1 = srcIndex1.getIndexStructureInputStream("meta") as Iterator<Array<String>>
-            var srcFieldCount1 = srcIndex1.getIntIndexProperty("index.inverted.fields.count", 0)
-            val srcFieldCount2 = srcFieldCount1// srcIndex2.getIntIndexProperty("index.inverted.fields.count", 0)
+            var srcFieldCount1 = 4 //srcIndex1.getIntIndexProperty("index.inverted.fields.count", 0)
+            val srcFieldCount2 = 4 // srcFieldCount1// srcIndex2.getIntIndexProperty("index.inverted.fields.count", 0)
             if (srcFieldCount1 != srcFieldCount2) {
                 metaBuilder.close()
                 throw Error("FieldCounts in source indices must match")
