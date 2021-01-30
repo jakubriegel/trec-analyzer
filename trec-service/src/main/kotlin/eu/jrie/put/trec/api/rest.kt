@@ -56,7 +56,7 @@ fun startServer() {
                 }
 
                 post("/topic") {
-                    val request: QueryRequest = call.receive()
+	            val request: QueryRequest = call.receive()
 
                     val (topic, matches) = indexService.findByTopic(
                         topicId = request.topic.id,
@@ -67,7 +67,7 @@ fun startServer() {
 
                     call.respond(
                         QueryResponse(topic, request.options, matches.toList())
-                    )
+		    )
                 }
             }
 
