@@ -29,6 +29,7 @@ import org.terrier.structures.IndexOnDisk
 import org.terrier.structures.IndexOnDisk.createIndex
 import org.terrier.structures.IndexOnDisk.createNewIndex
 import org.terrier.structures.IndexUtil
+import org.terrier.structures.IndexUtil.deleteIndex
 import org.terrier.structures.IndexUtil.renameIndex
 import org.terrier.structures.LexiconEntry
 import org.terrier.structures.LexiconOutputStream
@@ -106,13 +107,13 @@ fun initTerrier() {
 private fun mergeIndices(first: IndexOnDisk, second: IndexOnDisk): IndexOnDisk {
     val newIndex = createNewIndex(INDEX_PATH, nextPrefix)
     logger.info("Merging ${first.prefix} and ${second.prefix} into ${newIndex.prefix}")
-    logger.info("First\n${first.collectionStatistics}")
-    logger.info("Second\n${second.collectionStatistics}")
+//    logger.info("First\n${first.collectionStatistics}")
+//    logger.info("Second\n${second.collectionStatistics}")
     StructureMergerCustom(first, second, newIndex).mergeStructures()
     first.close()
     second.close()
-//    deleteIndex (INDEX_PATH, first.prefix)
-//    deleteIndex(INDEX_PATH, second.prefix)
+    deleteIndex(INDEX_PATH, first.prefix)
+    deleteIndex(INDEX_PATH, second.prefix)
     return newIndex
 }
 
@@ -667,7 +668,7 @@ open class StructureMergerCustom(
             IndexUtil.close(docidInput2)
             IndexUtil.close(metaInput1)
             IndexUtil.close(metaInput2)
-            destIndex.setIndexProperty("index.inverted.fields.count", ""+ fieldCount);
+//            destIndex.setIndexProperty("index.inverted.fields.count", ""+ fieldCount);
             if (fieldCount > 0) {
                 destIndex.addIndexStructure(
                     "document-factory",
