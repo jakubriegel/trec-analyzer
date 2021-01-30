@@ -19,7 +19,6 @@ import org.terrier.querying.SearchRequest.CONTROL_WMODEL
 import org.terrier.structures.IndexOnDisk
 import org.terrier.structures.IndexOnDisk.createIndex
 import org.terrier.structures.IndexOnDisk.createNewIndex
-import org.terrier.structures.IndexUtil.deleteIndex
 import org.terrier.structures.IndexUtil.renameIndex
 import org.terrier.structures.indexing.classical.BasicIndexer
 import org.terrier.structures.merging.BlockStructureMerger
@@ -27,7 +26,6 @@ import org.terrier.utility.ApplicationSetup
 import java.util.UUID.randomUUID
 import java.util.concurrent.ForkJoinPool
 import kotlin.coroutines.CoroutineContext
-
 
 
 data class TerrierArticle(
@@ -81,8 +79,8 @@ private fun mergeIndices(first: IndexOnDisk, second: IndexOnDisk): IndexOnDisk {
     BlockStructureMerger(first, second, newIndex).mergeStructures()
     first.close()
     second.close()
-    deleteIndex (INDEX_PATH, first.prefix)
-    deleteIndex(INDEX_PATH, second.prefix)
+//    deleteIndex (INDEX_PATH, first.prefix)
+//    deleteIndex(INDEX_PATH, second.prefix)
     return newIndex
 }
 
