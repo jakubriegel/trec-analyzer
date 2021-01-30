@@ -74,8 +74,10 @@ fun initTerrier() {
 private fun mergeIndices(first: IndexOnDisk, second: IndexOnDisk): IndexOnDisk {
     val newIndex = createNewIndex(INDEX_PATH, nextPrefix)
     logger.info("Merging ${first.prefix} and ${second.prefix} into ${newIndex.prefix}")
-    logger.info("First ${first.collectionStatistics}")
-    logger.info("Second ${second.collectionStatistics}")
+    logger.info("First\n${first.collectionStatistics}")
+    logger.info("First\n${first.properties}")
+    logger.info("Second\n${second.collectionStatistics}")
+    logger.info("Second\n${second.properties}")
     BlockStructureMerger(first, second, newIndex).mergeStructures()
     first.close()
     second.close()
