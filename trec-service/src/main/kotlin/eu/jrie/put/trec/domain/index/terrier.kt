@@ -673,7 +673,7 @@ open class StructureMergerCustom(
             IndexUtil.close(docidInput2)
             IndexUtil.close(metaInput1)
             IndexUtil.close(metaInput2)
-            //destIndex.setIndexProperty("index.inverted.fields.count", ""+ fieldCount);
+            destIndex.setIndexProperty("index.inverted.fields.count", ""+ fieldCount);
             if (fieldCount > 0) {
                 destIndex.addIndexStructure(
                     "document-factory",
