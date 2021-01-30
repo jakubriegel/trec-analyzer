@@ -94,6 +94,7 @@ private fun indexThreaded() {
                 logger.info("indexing chunk")
                 val prefix = nextPrefix
                 val indexer = BasicIndexer(INDEX_PATH, prefix)
+                indexer.externalParalllism = nThreads
                 val collection = FlatArticleCollection(articles)
                 indexer.index(arrayOf(collection))
                 createIndex(INDEX_PATH, prefix)
